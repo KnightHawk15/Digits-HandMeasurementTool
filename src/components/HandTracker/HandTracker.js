@@ -6,9 +6,15 @@ import * as hands from '@mediapipe/hands';
 import * as cam from '@mediapipe/camera_utils';
 import {useRef, useEffect, useState} from 'react';
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
+// import diagram_left from './skeleton_left.png';
+// import diagram_right from './skeleton_right.png';
+
+// Diagram Libraries
 
 const startTime = Date.now();
-const LandMarkData = [];
+const LandMarkDataALL = [];
+const LandMarkDataCoords = [];
+const LandMarkDataAngles = [];
 
 function HandTracker(){
   const webCamRef = useRef(null);
@@ -18,8 +24,9 @@ function HandTracker(){
   const [digit_z, setDigit_z] = useState(0);
   const [camRes1, setCamRes1] = useState(720);
   const [camRes2, setCamRes2] = useState(1280);
-  const [input1, setInput1] = useState(720);
-  const [input2, setInput2] = useState(1280);
+  const [res_height, setResHeight] = useState(720);
+  const [res_width, setResWidth] = useState(1280);
+  const [maxHands, setMaxHands] = useState(1);
   let camera = null;  
   
 const objectToCSVRow = (dataObject) => {
@@ -67,19 +74,23 @@ const objectToCSVRow = (dataObject) => {
       //Push the points to an array reducing to 6 decimal points 
       coordinates.push([parseFloat(xVal), parseFloat(yVal), parseFloat(zVal)]);
     }
-
-    LandMarkData.push(coordinates);
     
     const vectors = convertToVector(coordinates);
     const magnitudes =  calculateMagnitude(vectors);
     const angles = calculateAngle(vectors, magnitudes, deltaTime);
     
+    LandMarkDataCoords.push(coordinates);
+    LandMarkDataAngles.push(angles);
+    LandMarkDataALL.push([coordinates,angles]);
+
     console.log("Coordinates",coordinates);
     console.log("Vectors\n", vectors);
     console.log("Magnitudes", magnitudes);   
     console.log("Angles", angles);
     console.log("\n\n");
   }
+
+
 
   //Checks out 
   const convertToVector = (coordinates) =>{
@@ -357,7 +368,7 @@ const objectToCSVRow = (dataObject) => {
     });
 
     hands.setOptions({
-      maxNumHands: 1,
+      maxNumHands: maxHands,
       minDetectionConfidence: 0.75,
       minTrackingConfidence: 0.7
     });
@@ -375,57 +386,98 @@ const objectToCSVRow = (dataObject) => {
     }
   }, []);
 
-  function eventHandler(){
-    downloadCSV(LandMarkData);
+  function eventDownloadCoords(){
+    downloadCSV(LandMarkDataCoords);
+  }
+  function eventDownloadAngles(){
+    downloadCSV(LandMarkDataAngles);
+  }
+  function eventDownloadAll(){
+    downloadCSV(LandMarkDataALL);
   }
 
-  function onChangeInput1(e){
-    setInput1(e.target.value);
+  function onChangeResHeight(e){
+    setResHeight(e.target.value);
   }
 
-  function onChangeInput2(e){
-    setInput2(e.target.value);
+  function onChangeResWidth(e){
+    setResWidth(e.target.value);
   }
 
+  function onChangeMaxHands(e){
+    setMaxHands(e.target.value);
+  }
+  
   function setResolution(e){
     e.preventDefault();
-    setCamRes1(parseInt(input1));
-    setInput1("");
-    setCamRes2(parseInt(input2));
-    setInput2("");
-    console.log(input1, input2);
+    setCamRes1(parseInt(res_height));
+    setResHeight("");
+    setCamRes2(parseInt(res_width));
+    setResWidth("");
+    console.log(res_height, res_width);
   }
 
 
   return(
     <div className="container-hand-tracker">
-    <div className="main-container">
-    <h1>Please Use One Hand</h1>
-    <Webcam ref={webCamRef} />
+      <div className="panel-row">
 
-    <canvas 
-      ref={canvasRef}
-      className="output-canvas"
-      /> 
-    </div>
+        <div className="panel-controls">
+          <h1>CONTROLS</h1>
+          <div className="container-controls">
+          <input className="input-box" type="number" value={maxHands} onChange={(e)=>onChangeMaxHands(e)} placeholder="1" />
 
-    <div className="container-data">
-      <div>
-        <h2>Landmark_0</h2>
-        <p>X: {digit_x}</p>
-        <p>Y: {digit_y}</p>
-        <p>Z: {digit_z}</p>
-        <p>Number of datasets recorded: {countData(LandMarkData)}</p>
+          </div>
+        </div>
+
+    
+        <div className="panel-display">
+          <h1>DISPLAY</h1>
+          <div className="container-display">
+            <Webcam ref={webCamRef} className="webcam"/>
+
+            <canvas 
+              ref={canvasRef}
+              className="output-canvas"
+            /> 
+            <div className="resolution-config">
+            <label className="field-label">Camera Resolution:</label>
+              <input className="input-box" type="text" value={res_height} onChange={(e)=>onChangeResHeight(e)} placeholder="720p" />
+              <input className="input-box" type="text" value={res_width} onChange={(e)=>onChangeResWidth(e)} placeholder="1280p" />
+              <button className="button-csv" onClick={setResolution}>Set</button>
+            </div>
+
+          </div>
+
+          
+        </div>
+
+        <div className="panel-data">
+          <h1>DATA</h1>
+          <div className="container-data">
+            <div>
+              <h2>Diagram</h2>
+              <div className="diagrams">
+                
+              </div>
+
+
+              <h2>Read Outs</h2>
+              <p>res height: {camRes1}</p>
+              <p>res width: {camRes2}</p>
+              <p>Number of records: {countData(LandMarkDataALL)}</p>
+            </div>
+            <h2>Download</h2>
+            <form className="container-download">
+              
+              <button className="button-csv" onClick={eventDownloadCoords}>Coords</button>
+              <button className="button-csv" onClick={eventDownloadAngles}>Angles</button>
+              <button className="button-csv" onClick={eventDownloadAll}>All</button>
+            </form>
+          </div>
+        </div>
+
       </div>
-
-      <form className="utility-container">
-        <label className="selection-label">Enter your camera resolution</label>
-        <input className="input-box" type="text" value={input1} onChange={(e)=>onChangeInput1(e)} placeholder="Default set is 720p" />
-        <input className="input-box" type="text" value={input2} onChange={(e)=>onChangeInput2(e)} placeholder="Default set is 1280p" />
-        <button className="button-csv" onClick={setResolution}>Set new resolution</button>
-        <button className="button-csv" onClick={eventHandler}>Download CSV</button>
-      </form>
-    </div>
     </div>
   )
 }
