@@ -6,8 +6,9 @@ import * as hands from '@mediapipe/hands';
 import * as cam from '@mediapipe/camera_utils';
 import {useRef, useEffect, useState} from 'react';
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
-// import diagram_left from './skeleton_left.png';
-// import diagram_right from './skeleton_right.png';
+import diagram_left from './skeleton_left.png';
+import diagram_right from './skeleton_right.png';
+import { diagram_map } from './map';
 
 // Diagram Libraries
 
@@ -19,14 +20,23 @@ const LandMarkDataAngles = [];
 function HandTracker(){
   const webCamRef = useRef(null);
   const canvasRef = useRef(null);
-  const [digit_x, setDigit_x] = useState(0);
+  const canvasRefDiagram = useRef(null);
+  const [digit_x, setDigit_x] = useState("left");
   const [digit_y, setDigit_y] = useState(0);
   const [digit_z, setDigit_z] = useState(0);
   const [camRes1, setCamRes1] = useState(720);
   const [camRes2, setCamRes2] = useState(1280);
   const [res_height, setResHeight] = useState(720);
   const [res_width, setResWidth] = useState(1280);
-  const [maxHands, setMaxHands] = useState(1);
+  const [minDetectionConfidence_in, setminDetectionConfidence_in] = useState(0.75);
+  const [minDetectionConfidence, setminDetectionConfidence] = useState(0.75);
+  const [minTrackingConfidence_in, setminTrackingConfidence_in] = useState(0.7);
+  const [minTrackingConfidence, setminTrackingConfidence] = useState(0.7);
+  
+  // const diagram_left = new Image();
+  // const diagram_right = new Image();
+  const [diagram, setDiagram] = useState(diagram_right);
+
   let camera = null;  
   
 const objectToCSVRow = (dataObject) => {
@@ -82,7 +92,40 @@ const objectToCSVRow = (dataObject) => {
     LandMarkDataCoords.push(coordinates);
     LandMarkDataAngles.push(angles);
     LandMarkDataALL.push([coordinates,angles]);
+    
+    // Diagram
 
+    const canvasElementDiagram = canvasRefDiagram.current;
+    const canvasCtxDia = canvasElementDiagram.getContext("2d");
+    canvasCtxDia.imageSmoothingEnabled = false;
+    if(objArr.multiHandedness[0].label == "Left"){
+        setDiagram(diagram_left);
+    }
+    else {
+        setDiagram(diagram_right);
+    }
+    var img = document.getElementById("diagram_preload");
+    canvasCtxDia.save();
+    canvasCtxDia.fillStyle = "#DB0E00";
+    canvasCtxDia.font = "10px Arial";
+    canvasCtxDia.clearRect(0,0,canvasElementDiagram.width,canvasElementDiagram.height);
+    canvasCtxDia.drawImage(
+      img,
+      (canvasElementDiagram.width-canvasElementDiagram.height*0.9)/2,
+      0,
+      canvasElementDiagram.height*0.9,
+      canvasElementDiagram.height
+    );
+
+
+    // Display Angles on the diagram
+    for(let i=1; i<16; i++){
+      canvasCtxDia.fillText(
+        String(Math.round(angles[i])),
+        (canvasElementDiagram.width-canvasElementDiagram.height*0.9)/2 + canvasElementDiagram.height*0.9*(diagram_map[i-1][0]/362),
+        canvasElementDiagram.height*(diagram_map[i-1][1]/604)
+      )
+    }
     console.log("Coordinates",coordinates);
     console.log("Vectors\n", vectors);
     console.log("Magnitudes", magnitudes);   
@@ -339,6 +382,9 @@ const objectToCSVRow = (dataObject) => {
       canvasElement.height
     );
 
+    
+
+
     if(results.multiHandLandmarks){
       
       for(const landmarks of results.multiHandLandmarks) {
@@ -347,12 +393,17 @@ const objectToCSVRow = (dataObject) => {
         drawLandmarks(canvasCtx, landmarks, {color: "#00ffd0", lineWidth: 1});//#5d0db8 purple
       
       }
+      
+      
+
+
+      console.log(results.multiHandedness[0].label);
       const x = results.multiHandLandmarks[0][0].x;
       const y = results.multiHandLandmarks[0][0].y;
       const z = results.multiHandLandmarks[0][0].z;
       
-      setDigit_x(x);
-      setDigit_y(y);
+      // setDigit_x(canvasElementDiagram.width);
+      // setDigit_y(canvasElementDiagram.height);
       setDigit_z(z);
 
       collectData(results);
@@ -368,10 +419,13 @@ const objectToCSVRow = (dataObject) => {
     });
 
     hands.setOptions({
-      maxNumHands: maxHands,
-      minDetectionConfidence: 0.75,
-      minTrackingConfidence: 0.7
+      maxNumHands: 1,
+      minDetectionConfidence: minDetectionConfidence,
+      minTrackingConfidence: minTrackingConfidence
     });
+
+    // diagram_left.src = './skeleton_left.png';
+    // diagram_right.src = './skeleton_right.png';
 
     hands.onResults(onResults);
 
@@ -384,8 +438,12 @@ const objectToCSVRow = (dataObject) => {
       camera.start();
       
     }
+
   }, []);
 
+  // EVENT HANDLERS
+
+  // DOWNLOADS
   function eventDownloadCoords(){
     downloadCSV(LandMarkDataCoords);
   }
@@ -396,18 +454,15 @@ const objectToCSVRow = (dataObject) => {
     downloadCSV(LandMarkDataALL);
   }
 
+  // CONFIG
+
+  //RES
   function onChangeResHeight(e){
     setResHeight(e.target.value);
   }
-
   function onChangeResWidth(e){
     setResWidth(e.target.value);
   }
-
-  function onChangeMaxHands(e){
-    setMaxHands(e.target.value);
-  }
-  
   function setResolution(e){
     e.preventDefault();
     setCamRes1(parseInt(res_height));
@@ -417,6 +472,22 @@ const objectToCSVRow = (dataObject) => {
     console.log(res_height, res_width);
   }
 
+  //HANDS
+  function onChangeminDetectionConfidence(e){
+    setminDetectionConfidence_in(e.target.value);
+  }
+  function onChangeminTrackingConfidence(e){
+    setminTrackingConfidence_in(e.target.value);
+  }
+
+  function configHands(e){
+    e.preventDefault();
+    setminDetectionConfidence(parseInt(minDetectionConfidence_in));
+    setminDetectionConfidence_in("");
+    setminTrackingConfidence(parseInt(minTrackingConfidence_in));
+    setminTrackingConfidence_in("");
+    console.log(minDetectionConfidence_in,minTrackingConfidence_in);
+  }
 
   return(
     <div className="container-hand-tracker">
@@ -425,8 +496,13 @@ const objectToCSVRow = (dataObject) => {
         <div className="panel-controls">
           <h1>CONTROLS</h1>
           <div className="container-controls">
-          <input className="input-box" type="number" value={maxHands} onChange={(e)=>onChangeMaxHands(e)} placeholder="1" />
-
+          <form className="control-form">
+          <label className="field-label">Min. Detection Conf.</label>
+          <input className="input-box" type="text" value={minDetectionConfidence_in} onChange={(e)=>onChangeminDetectionConfidence(e)} placeholder="1" />
+          <label className="field-label">Min. Tracking Conf.</label>
+          <input className="input-box" type="text" value={minTrackingConfidence_in} onChange={(e)=>onChangeminTrackingConfidence(e)} placeholder="1" />
+          <button className="button-form" onClick={configHands}>Set</button>
+          </form>
           </div>
         </div>
 
@@ -440,13 +516,14 @@ const objectToCSVRow = (dataObject) => {
               ref={canvasRef}
               className="output-canvas"
             /> 
+
             <div className="resolution-config">
             <label className="field-label">Camera Resolution:</label>
               <input className="input-box" type="text" value={res_height} onChange={(e)=>onChangeResHeight(e)} placeholder="720p" />
               <input className="input-box" type="text" value={res_width} onChange={(e)=>onChangeResWidth(e)} placeholder="1280p" />
-              <button className="button-csv" onClick={setResolution}>Set</button>
+              <button className="button-form" onClick={setResolution}>Set</button>
             </div>
-
+            
           </div>
 
           
@@ -455,24 +532,28 @@ const objectToCSVRow = (dataObject) => {
         <div className="panel-data">
           <h1>DATA</h1>
           <div className="container-data">
-            <div>
               <h2>Diagram</h2>
-              <div className="diagrams">
-                
-              </div>
+              <canvas 
+              ref={canvasRefDiagram}
+              className="diagram"
+              /> 
+              <img id="diagram_preload" src={diagram} alt="hand diagram" className="diagrams_src"/>
 
 
               <h2>Read Outs</h2>
-              <p>res height: {camRes1}</p>
+              {/* <p>res height: {camRes1}</p>
               <p>res width: {camRes2}</p>
+              <h2>Landmark_0</h2>
+              <p>X: {digit_x}</p>
+              <p>Y: {digit_y}</p>
+              <p>Z: {digit_z}</p> */}
               <p>Number of records: {countData(LandMarkDataALL)}</p>
-            </div>
             <h2>Download</h2>
             <form className="container-download">
               
-              <button className="button-csv" onClick={eventDownloadCoords}>Coords</button>
-              <button className="button-csv" onClick={eventDownloadAngles}>Angles</button>
-              <button className="button-csv" onClick={eventDownloadAll}>All</button>
+              <button className="button-form" onClick={eventDownloadCoords}>Coords</button>
+              <button className="button-form" onClick={eventDownloadAngles}>Angles</button>
+              <button className="button-form" onClick={eventDownloadAll}>All</button>
             </form>
           </div>
         </div>
