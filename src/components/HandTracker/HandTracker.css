@@ -84,7 +84,7 @@ p {
   height: 604px;
   width: 362px;
   /* border: 1px solid red; */
-  display: block;
+  display: inline-block;
   /* position: fixed; */
 }
 
