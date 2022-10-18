@@ -81,13 +81,16 @@ p {
 /* Data */
 
 .diagram {
-  height: 45%;
-  width: 100%;
+  height: 604px;
+  width: 362px;
   /* border: 1px solid red; */
   display: block;
+  /* position: fixed; */
 }
 
 .diagrams_src{
+  height: 604px;
+  width: 362px;
   display: none;
 }
 
