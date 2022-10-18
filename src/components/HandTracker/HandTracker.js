@@ -10,9 +10,8 @@ import diagram_left from './skeleton_left.png';
 import diagram_right from './skeleton_right.png';
 import { diagram_map } from './map';
 
-// Diagram Libraries
-
 const startTime = Date.now();
+
 const LandMarkDataALL = [];
 const LandMarkDataCoords = [];
 const LandMarkDataAngles = [];
@@ -96,36 +95,53 @@ const objectToCSVRow = (dataObject) => {
     // Diagram
 
     const canvasElementDiagram = canvasRefDiagram.current;
-    const canvasCtxDia = canvasElementDiagram.getContext("2d");
+    const canvasCtxDia = canvasElementDiagram.getContext("2d");//.setTransform(2, 0, 0, 2, 0, 0);
+    canvasElementDiagram.width = 361;
+    canvasElementDiagram.height = 604;
     canvasCtxDia.imageSmoothingEnabled = false;
-    if(objArr.multiHandedness[0].label == "Left"){
-        setDiagram(diagram_left);
-    }
-    else {
-        setDiagram(diagram_right);
-    }
+
     var img = document.getElementById("diagram_preload");
     canvasCtxDia.save();
     canvasCtxDia.fillStyle = "#DB0E00";
-    canvasCtxDia.font = "10px Arial";
+    canvasCtxDia.font = "24px Arial";
     canvasCtxDia.clearRect(0,0,canvasElementDiagram.width,canvasElementDiagram.height);
     canvasCtxDia.drawImage(
       img,
-      (canvasElementDiagram.width-canvasElementDiagram.height*0.9)/2,
       0,
-      canvasElementDiagram.height*0.9,
-      canvasElementDiagram.height
+      0,
+      361,//canvasElementDiagram.height*0.9,
+      604//canvasElementDiagram.height
     );
-
-
-    // Display Angles on the diagram
-    for(let i=1; i<16; i++){
-      canvasCtxDia.fillText(
-        String(Math.round(angles[i])),
-        (canvasElementDiagram.width-canvasElementDiagram.height*0.9)/2 + canvasElementDiagram.height*0.9*(diagram_map[i-1][0]/362),
-        canvasElementDiagram.height*(diagram_map[i-1][1]/604)
-      )
+    if(objArr.multiHandedness[0].label == "Right"){
+      setDiagram(diagram_left);
+      for(let i=1; i<16; i++){
+        canvasCtxDia.fillText(
+          String(Math.round(angles[i])),
+          361 - (diagram_map[i-1][0])*1,
+          (diagram_map[i-1][1])*1
+  
+        )
+      }
     }
+    else {
+        setDiagram(diagram_right);
+        for(let i=1; i<16; i++){
+          canvasCtxDia.fillText(
+            String(Math.round(angles[i])),
+            (diagram_map[i-1][0])*1,
+            (diagram_map[i-1][1])*1
+    
+          )
+        }
+    }
+    
+    // Display Angles on the diagram
+    
+    console.log(canvasElementDiagram.width)
+    console.log(canvasElementDiagram.height)
+    
+
+
     console.log("Coordinates",coordinates);
     console.log("Vectors\n", vectors);
     console.log("Magnitudes", magnitudes);   
@@ -382,7 +398,7 @@ const objectToCSVRow = (dataObject) => {
       canvasElement.height
     );
 
-    
+
 
 
     if(results.multiHandLandmarks){
@@ -503,6 +519,13 @@ const objectToCSVRow = (dataObject) => {
           <input className="input-box" type="text" value={minTrackingConfidence_in} onChange={(e)=>onChangeminTrackingConfidence(e)} placeholder="1" />
           <button className="button-form" onClick={configHands}>Set</button>
           </form>
+          <h2>Download</h2>
+            <form className="container-download">
+              
+              <button className="button-form" onClick={eventDownloadCoords}>Coords</button>
+              <button className="button-form" onClick={eventDownloadAngles}>Angles</button>
+              <button className="button-form" onClick={eventDownloadAll}>All</button>
+            </form>
           </div>
         </div>
 
@@ -535,10 +558,11 @@ const objectToCSVRow = (dataObject) => {
               <h2>Diagram</h2>
               <canvas 
               ref={canvasRefDiagram}
+              id ="diagram_out"
               className="diagram"
               /> 
               <img id="diagram_preload" src={diagram} alt="hand diagram" className="diagrams_src"/>
-
+              
 
               <h2>Read Outs</h2>
               {/* <p>res height: {camRes1}</p>
@@ -548,13 +572,7 @@ const objectToCSVRow = (dataObject) => {
               <p>Y: {digit_y}</p>
               <p>Z: {digit_z}</p> */}
               <p>Number of records: {countData(LandMarkDataALL)}</p>
-            <h2>Download</h2>
-            <form className="container-download">
-              
-              <button className="button-form" onClick={eventDownloadCoords}>Coords</button>
-              <button className="button-form" onClick={eventDownloadAngles}>Angles</button>
-              <button className="button-form" onClick={eventDownloadAll}>All</button>
-            </form>
+            
           </div>
         </div>
 
