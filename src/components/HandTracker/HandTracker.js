@@ -106,7 +106,7 @@ function HandTracker(){
     
     // LandMarkDataCoords.push(coordinates);
     LandMarkDataAngles.push(angles);
-    LandMarkDataAngles.push(file_names[video_index]);
+    // LandMarkDataAngles.push(file_names[video_index]);
     // LandMarkDataALL.push([coordinates,angles]);
     
     // Diagram
