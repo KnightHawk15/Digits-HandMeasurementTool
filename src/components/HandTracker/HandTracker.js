@@ -8,6 +8,7 @@ import {useRef, useEffect, useState} from 'react';
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 import diagram_left from './skeleton_left.png';
 import diagram_right from './skeleton_right.png';
+// import temp_upload from './testing_10sec.mp4';
 import { diagram_map } from './map';
 
 const startTime = Date.now();
@@ -15,11 +16,16 @@ const startTime = Date.now();
 const LandMarkDataALL = [];
 const LandMarkDataCoords = [];
 const LandMarkDataAngles = [];
+const file_names = [];
 
 function HandTracker(){
+
+  // Display: 
+
   const webCamRef = useRef(null);
   const canvasRef = useRef(null);
   const canvasRefDiagram = useRef(null);
+  const [diagram, setDiagram] = useState(diagram_right);
   const [digit_x, setDigit_x] = useState("left");
   const [digit_y, setDigit_y] = useState(0);
   const [digit_z, setDigit_z] = useState(0);
@@ -27,27 +33,36 @@ function HandTracker(){
   const [camRes2, setCamRes2] = useState(1280);
   const [res_height, setResHeight] = useState(720);
   const [res_width, setResWidth] = useState(1280);
+
+  let camera = null;  
+
+  // Model Config
   const [minDetectionConfidence_in, setminDetectionConfidence_in] = useState(0.75);
   const [minDetectionConfidence, setminDetectionConfidence] = useState(0.75);
   const [minTrackingConfidence_in, setminTrackingConfidence_in] = useState(0.7);
   const [minTrackingConfidence, setminTrackingConfidence] = useState(0.7);
   
-  // const diagram_left = new Image();
-  // const diagram_right = new Image();
-  const [diagram, setDiagram] = useState(diagram_right);
-
-  let camera = null;  
+  // Video:
+  let video = null;
+  const [filesSrc, setFilesSrc] = useState(null); // array for the uploaded videos
+  const videoRef = useRef(null);
+  const [video_index, setVideoIndex] = useState(0);
+  const [video_src, setVidSource] = useState(null);
+  const [input_mode, setinputMode] = useState(true); // true = webcam, false = upload
   
-const objectToCSVRow = (dataObject) => {
-  let dataArray = [];
-  for (let o in dataObject) {
-      let innerValue = dataObject[o]===null? '' : dataObject[o].toString();
-      let result = innerValue.replace(/"/g, ' ');
-      result = ' ' + result + ', ';
-      dataArray.push(result);
+  let videoElement = null;
+
+  
+  const objectToCSVRow = (dataObject) => {
+    let dataArray = [];
+    for (let o in dataObject) {
+        let innerValue = dataObject[o]===null? '' : dataObject[o].toString();
+        let result = innerValue.replace(/"/g, ' ');
+        result = ' ' + result + ', ';
+        dataArray.push(result);
+    }
+    return dataArray.join(' ') + '\r\n';
   }
-  return dataArray.join(' ') + '\r\n';
-}
 
   const downloadCSV = (arrayOfObjects=[]) =>{
     if (!arrayOfObjects.length) {
@@ -72,6 +87,7 @@ const objectToCSVRow = (dataObject) => {
     const endTime = Date.now();
     const deltaTime = endTime - startTime;
     coordinates.push(deltaTime);
+    
     //console.log(objArr);
     //Iterate through the array of landmarks which contain 21 distinct sets of points
     
@@ -88,9 +104,10 @@ const objectToCSVRow = (dataObject) => {
     const magnitudes =  calculateMagnitude(vectors);
     const angles = calculateAngle(vectors, magnitudes, deltaTime);
     
-    LandMarkDataCoords.push(coordinates);
+    // LandMarkDataCoords.push(coordinates);
     LandMarkDataAngles.push(angles);
-    LandMarkDataALL.push([coordinates,angles]);
+    LandMarkDataAngles.push(file_names[video_index]);
+    // LandMarkDataALL.push([coordinates,angles]);
     
     // Diagram
 
@@ -137,16 +154,16 @@ const objectToCSVRow = (dataObject) => {
     
     // Display Angles on the diagram
     
-    console.log(canvasElementDiagram.width)
-    console.log(canvasElementDiagram.height)
+    console.log(video_index)
+    // console.log(canvasElementDiagram.height)
     
 
 
-    console.log("Coordinates",coordinates);
-    console.log("Vectors\n", vectors);
-    console.log("Magnitudes", magnitudes);   
-    console.log("Angles", angles);
-    console.log("\n\n");
+    // console.log("Coordinates",coordinates);
+    // console.log("Vectors\n", vectors);
+    // console.log("Magnitudes", magnitudes);   
+    // console.log("Angles", angles);
+    // console.log("\n\n");
   }
 
 
@@ -378,8 +395,17 @@ const objectToCSVRow = (dataObject) => {
 
 
   const onResults = (results)=>{
-    const videoWidth = webCamRef.current.video.videoWidth;
-    const videoHeight = webCamRef.current.video.videoHeight;
+    let videoWidth = 200;
+    let videoHeight = 200;
+    if(input_mode == "webcam"){
+      videoWidth = webCamRef.current.video.videoWidth;
+      videoHeight = webCamRef.current.video.videoHeight;
+    } else {
+      videoWidth = 168;
+      videoHeight = 300;
+    }
+
+
 
     //Sets height and width of canvas 
     canvasRef.current.width = videoWidth;
@@ -413,7 +439,7 @@ const objectToCSVRow = (dataObject) => {
       
 
 
-      console.log(results.multiHandedness[0].label);
+      // console.log(results.multiHandedness[0].label);
       const x = results.multiHandLandmarks[0][0].x;
       const y = results.multiHandLandmarks[0][0].y;
       const z = results.multiHandLandmarks[0][0].z;
@@ -428,36 +454,65 @@ const objectToCSVRow = (dataObject) => {
   }
   
   useEffect(()=>{
+
+    // Load MP Hands
     const hands = new Hands({
       locateFile:(file)=>{
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.3.1626903359/${file}`;
       },
     });
-
+    // Configure
     hands.setOptions({
       maxNumHands: 1,
       minDetectionConfidence: minDetectionConfidence,
       minTrackingConfidence: minTrackingConfidence
     });
-
-    // diagram_left.src = './skeleton_left.png';
-    // diagram_right.src = './skeleton_right.png';
-
+    // Collect/Display
     hands.onResults(onResults);
+    
+    // Manage inputs
 
-    if(typeof webCamRef.current !== 'undefined' && webCamRef.current !== null){
-      camera = new cam.Camera(webCamRef.current.video,{
-      onFrame: async()=>{
-        await hands.send({image:webCamRef.current.video})
-      }
-      });
-      camera.start();
-      
+    console.log(input_mode);
+    console.log(videoRef.current instanceof HTMLVideoElement);
+
+    if(input_mode && webCamRef.current.video !== null && typeof webCamRef.current !== 'undefined' && webCamRef.current !== null){
+        camera = new cam.Camera(webCamRef.current.video,{
+        onFrame: async()=>{
+          await hands.send({image:webCamRef.current.video})
+        }
+        });
+        camera.start();
     }
+    else if(videoRef.current !== null){
+        camera = null;
+        async function detectionFrame(){
+          await hands.send({image: videoRef.current});
+          videoRef.current.requestVideoFrameCallback(detectionFrame);
+        }
+        videoRef.current.requestVideoFrameCallback(detectionFrame);
+      }
+    
 
-  }, []);
+  }, [input_mode,videoRef]);
 
   // EVENT HANDLERS
+
+  // UPLOADS
+
+  const onChangeUpload = (e) => {
+    setVideoIndex(0);
+    const files = e.target.files;
+    const file_names_temp = e.target.files_names
+    file_names.length = 0;
+
+    const srcs = [];
+    for(let i = 0; i < files.length; i++){
+      srcs.push(URL.createObjectURL(files[i]));
+      file_names.push(files[i].name);
+    }
+    setFilesSrc(srcs);
+    console.log(file_names);
+  }
 
   // DOWNLOADS
   function eventDownloadCoords(){
@@ -469,6 +524,8 @@ const objectToCSVRow = (dataObject) => {
   function eventDownloadAll(){
     downloadCSV(LandMarkDataALL);
   }
+
+
 
   // CONFIG
 
@@ -487,6 +544,10 @@ const objectToCSVRow = (dataObject) => {
     setResWidth("");
     console.log(res_height, res_width);
   }
+  function onChangeInputMode(){
+    setinputMode(!input_mode);
+
+  }
 
   //HANDS
   function onChangeminDetectionConfidence(e){
@@ -499,10 +560,13 @@ const objectToCSVRow = (dataObject) => {
   function configHands(e){
     e.preventDefault();
     setminDetectionConfidence(parseInt(minDetectionConfidence_in));
-    setminDetectionConfidence_in("");
     setminTrackingConfidence(parseInt(minTrackingConfidence_in));
-    setminTrackingConfidence_in("");
     console.log(minDetectionConfidence_in,minTrackingConfidence_in);
+  }
+  function resetCollection(e){
+    LandMarkDataALL.length = 0;
+    LandMarkDataCoords.length = 0;
+    LandMarkDataAngles.length = 0;
   }
 
   return(
@@ -510,8 +574,10 @@ const objectToCSVRow = (dataObject) => {
       <div className="panel-row">
 
         <div className="panel-controls">
+          
           <h1>CONTROLS</h1>
           <div className="container-controls">
+          <h2>Model Config (not working)</h2>
           <form className="control-form">
           <label className="field-label">Min. Detection Conf.</label>
           <input className="input-box" type="text" value={minDetectionConfidence_in} onChange={(e)=>onChangeminDetectionConfidence(e)} placeholder="1" />
@@ -519,13 +585,29 @@ const objectToCSVRow = (dataObject) => {
           <input className="input-box" type="text" value={minTrackingConfidence_in} onChange={(e)=>onChangeminTrackingConfidence(e)} placeholder="1" />
           <button className="button-form" onClick={configHands}>Set</button>
           </form>
+          <hr className="container-sep"/>
+          <h2>Capture Mode</h2>
+          <div className='button-switch'>
+            <button className='button-webcam' onClick={onChangeInputMode} style = {{ backgroundColor: input_mode ? "#5DA85B" : "#FFF", color: input_mode ? "#fff" : "#000"}}>Webcam</button>
+            <button className='button-upload' onClick={onChangeInputMode} style = {{ backgroundColor: !input_mode ? "#5DA85B" : "#FFF", color: !input_mode ? "#fff" : "#000"}}>Upload</button>
+          </div>
+          <hr className="container-sep"/>
+          <h2>Upload</h2>
+          <form className="container-upload">
+          <input className="input-file" type='file' multiple onChange={(e)=>onChangeUpload(e)}/>
+          <p> Please note the video file names <b>must</b> follow the below naming convention <br/><i>&lt;two letter patient initials&gt; &lt;MM/YY&gt; &lt;hand: lt|rt&gt; &lt;side: Pal|Rad|Uln&gt; &lt;angle(?): olb|side&gt; &lt;final pose: fist|ext|IM&gt;</i></p>
+          {/* <button className="button-form" >Play</button> */}
+          {/* <button className="button-form">Pause</button> */}
+          </form>
+          <hr className="container-sep"/>
           <h2>Download</h2>
-            <form className="container-download">
-              
-              <button className="button-form" onClick={eventDownloadCoords}>Coords</button>
-              <button className="button-form" onClick={eventDownloadAngles}>Angles</button>
-              <button className="button-form" onClick={eventDownloadAll}>All</button>
-            </form>
+          <form className="container-download">
+            <button className="button-form" onClick={eventDownloadCoords}>Coords</button>
+            <button className="button-form" onClick={eventDownloadAngles}>Angles</button>
+            <button className="button-form" onClick={eventDownloadAll}>All</button>
+          </form>
+          <hr className="container-sep"/>
+          <button className="button-form" onClick={resetCollection}>Reset Collection</button>
           </div>
         </div>
 
@@ -533,13 +615,22 @@ const objectToCSVRow = (dataObject) => {
         <div className="panel-display">
           <h1>DISPLAY</h1>
           <div className="container-display">
+            {/* Inputs */}
             <Webcam ref={webCamRef} className="webcam"/>
+            {filesSrc && (
+            <video 
+              ref={videoRef} 
+              className="output-video" 
+              src={filesSrc[video_index]} 
+              onEnded = {() => setVideoIndex((idx) => idx + 1)}
+              autoPlay
+            >Video is not support in this browser</video>
+            )}
+            {/* Outputs */}
+            <canvas ref={canvasRef} className="output-canvas"/>
 
-            <canvas 
-              ref={canvasRef}
-              className="output-canvas"
-            /> 
-
+            
+            <hr className="container-sep"/>
             <div className="resolution-config">
             <label className="field-label">Camera Resolution:</label>
               <input className="input-box" type="text" value={res_height} onChange={(e)=>onChangeResHeight(e)} placeholder="720p" />
@@ -556,13 +647,9 @@ const objectToCSVRow = (dataObject) => {
           <h1>DATA</h1>
           <div className="container-data">
               <h2>Diagram</h2>
-              <canvas 
-              ref={canvasRefDiagram}
-              id ="diagram_out"
-              className="diagram"
-              /> 
+              <canvas ref={canvasRefDiagram} id ="diagram_out" className="diagram"/> 
               <img id="diagram_preload" src={diagram} alt="hand diagram" className="diagrams_src"/>
-              
+              <hr className="container-sep"/>
 
               <h2>Read Outs</h2>
               {/* <p>res height: {camRes1}</p>
@@ -571,7 +658,7 @@ const objectToCSVRow = (dataObject) => {
               <p>X: {digit_x}</p>
               <p>Y: {digit_y}</p>
               <p>Z: {digit_z}</p> */}
-              <p>Number of records: {countData(LandMarkDataALL)}</p>
+              <p>Number of records: {countData(LandMarkDataAngles)}</p>
             
           </div>
         </div>

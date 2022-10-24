@@ -15,7 +15,11 @@ function App() {
       <Switch>
         <Route exact path='/'>
           <Home />
-          <Link className="button" to='/hand-tracker'>HandTracker</Link>
+          <Link className="button" to='/hand-tracker'>HandTracker - Webcam</Link>
+        </Route>
+        <Route exact path='/'>
+          <Home />
+          <Link className="button" to='/hand-tracker'>HandTracker - Upload</Link>
         </Route>
 
         <Route path='/hand-tracker'>
