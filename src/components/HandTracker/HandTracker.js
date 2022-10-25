@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import './HandTracker.css';
 import Webcam from 'react-webcam';
 import {Hands} from '@mediapipe/hands'; 
@@ -10,6 +10,7 @@ import diagram_left from './skeleton_left.png';
 import diagram_right from './skeleton_right.png';
 // import temp_upload from './testing_10sec.mp4';
 import { diagram_map } from './map';
+// import ReactPlayer from 'react-player'
 
 const startTime = Date.now();
 
@@ -17,6 +18,8 @@ const LandMarkDataALL = [];
 const LandMarkDataCoords = [];
 const LandMarkDataAngles = [];
 const file_names = [];
+var mp_hands = null;
+var current_file = "";
 
 function HandTracker(){
 
@@ -26,8 +29,6 @@ function HandTracker(){
   const canvasRef = useRef(null);
   const canvasRefDiagram = useRef(null);
   const [diagram, setDiagram] = useState(diagram_right);
-  const [digit_x, setDigit_x] = useState("left");
-  const [digit_y, setDigit_y] = useState(0);
   const [digit_z, setDigit_z] = useState(0);
   const [camRes1, setCamRes1] = useState(720);
   const [camRes2, setCamRes2] = useState(1280);
@@ -37,21 +38,15 @@ function HandTracker(){
   let camera = null;  
 
   // Model Config
-  const [minDetectionConfidence_in, setminDetectionConfidence_in] = useState(0.75);
   const [minDetectionConfidence, setminDetectionConfidence] = useState(0.75);
-  const [minTrackingConfidence_in, setminTrackingConfidence_in] = useState(0.7);
   const [minTrackingConfidence, setminTrackingConfidence] = useState(0.7);
   
   // Video:
-  let video = null;
   const [filesSrc, setFilesSrc] = useState(null); // array for the uploaded videos
-  const videoRef = useRef(null);
-  const [video_index, setVideoIndex] = useState(0);
-  const [video_src, setVidSource] = useState(null);
+  const videoRef = useRef();
+  const [video_play, setVideoPlay] = useState(false);
+  const [file_index, setFileIndex] = useState(0);
   const [input_mode, setinputMode] = useState(true); // true = webcam, false = upload
-  
-  let videoElement = null;
-
   
   const objectToCSVRow = (dataObject) => {
     let dataArray = [];
@@ -87,8 +82,7 @@ function HandTracker(){
     const endTime = Date.now();
     const deltaTime = endTime - startTime;
     coordinates.push(deltaTime);
-    
-    //console.log(objArr);
+
     //Iterate through the array of landmarks which contain 21 distinct sets of points
     
     for(let i=0; i<21; i++){
@@ -104,10 +98,7 @@ function HandTracker(){
     const magnitudes =  calculateMagnitude(vectors);
     const angles = calculateAngle(vectors, magnitudes, deltaTime);
     
-    // LandMarkDataCoords.push(coordinates);
-    LandMarkDataAngles.push(angles);
-    // LandMarkDataAngles.push(file_names[video_index]);
-    // LandMarkDataALL.push([coordinates,angles]);
+    
     
     // Diagram
 
@@ -151,19 +142,12 @@ function HandTracker(){
           )
         }
     }
-    
-    // Display Angles on the diagram
-    
-    console.log(video_index)
-    // console.log(canvasElementDiagram.height)
-    
 
+    LandMarkDataCoords.push(coordinates);
+    angles.push(current_file);
+    LandMarkDataAngles.push(angles);
+    LandMarkDataALL.push([coordinates,angles]);
 
-    // console.log("Coordinates",coordinates);
-    // console.log("Vectors\n", vectors);
-    // console.log("Magnitudes", magnitudes);   
-    // console.log("Angles", angles);
-    // console.log("\n\n");
   }
 
 
@@ -397,7 +381,7 @@ function HandTracker(){
   const onResults = (results)=>{
     let videoWidth = 200;
     let videoHeight = 200;
-    if(input_mode == "webcam"){
+    if(input_mode){
       videoWidth = webCamRef.current.video.videoWidth;
       videoHeight = webCamRef.current.video.videoHeight;
     } else {
@@ -424,9 +408,6 @@ function HandTracker(){
       canvasElement.height
     );
 
-
-
-
     if(results.multiHandLandmarks){
       
       for(const landmarks of results.multiHandLandmarks) {
@@ -436,75 +417,77 @@ function HandTracker(){
       
       }
       
-      
-
-
-      // console.log(results.multiHandedness[0].label);
-      const x = results.multiHandLandmarks[0][0].x;
-      const y = results.multiHandLandmarks[0][0].y;
       const z = results.multiHandLandmarks[0][0].z;
-      
-      // setDigit_x(canvasElementDiagram.width);
-      // setDigit_y(canvasElementDiagram.height);
       setDigit_z(z);
 
       collectData(results);
     }
     canvasCtx.restore();
   }
-  
+
   useEffect(()=>{
 
     // Load MP Hands
-    const hands = new Hands({
+    camera = null;
+
+    const mdc = minDetectionConfidence;
+    const mtc = minTrackingConfidence;
+    
+
+
+    //const mp_hands = new Hands({
+    mp_hands = new Hands({
       locateFile:(file)=>{
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.3.1626903359/${file}`;
       },
     });
     // Configure
-    hands.setOptions({
+    mp_hands.setOptions({
       maxNumHands: 1,
-      minDetectionConfidence: minDetectionConfidence,
-      minTrackingConfidence: minTrackingConfidence
+      minDetectionConfidence: mdc,
+      minTrackingConfidence: mtc
     });
     // Collect/Display
-    hands.onResults(onResults);
+    mp_hands.onResults(onResults);
     
-    // Manage inputs
-
+    // Manage inputs    
     console.log(input_mode);
     console.log(videoRef.current instanceof HTMLVideoElement);
 
     if(input_mode && webCamRef.current.video !== null && typeof webCamRef.current !== 'undefined' && webCamRef.current !== null){
         camera = new cam.Camera(webCamRef.current.video,{
         onFrame: async()=>{
-          await hands.send({image:webCamRef.current.video})
+          await mp_hands.send({image:webCamRef.current.video})
         }
         });
         camera.start();
+        console.log("input mode: Webcam")
+
     }
     else if(videoRef.current !== null){
-        camera = null;
         async function detectionFrame(){
-          await hands.send({image: videoRef.current});
+          await mp_hands.send({image: videoRef.current});
           videoRef.current.requestVideoFrameCallback(detectionFrame);
         }
         videoRef.current.requestVideoFrameCallback(detectionFrame);
+        console.log("input mode: Upload")
       }
     
+    console.log("New Model Loaded:");
+    console.log("mdc",mdc);
+    console.log("mtc",mtc);
 
-  }, [input_mode,videoRef]);
+  }, [input_mode,minDetectionConfidence,minTrackingConfidence]);
 
-  // EVENT HANDLERS
+    // EVENT HANDLERS
 
   // UPLOADS
 
   const onChangeUpload = (e) => {
-    setVideoIndex(0);
+    setFileIndex(0);
     const files = e.target.files;
-    const file_names_temp = e.target.files_names
     file_names.length = 0;
-
+    
     const srcs = [];
     for(let i = 0; i < files.length; i++){
       srcs.push(URL.createObjectURL(files[i]));
@@ -512,18 +495,32 @@ function HandTracker(){
     }
     setFilesSrc(srcs);
     console.log(file_names);
+    current_file = file_names[0]
+  };
+
+  const incrFileIndex = () => {
+    setFileIndex((file_index) => file_index + 1);
+    setVideoPlay(true);
+    if(file_index < file_names.length){
+      current_file = file_names[file_index+1]
+    }
+    console.log("file name: ",current_file,"file index: ", file_index)
   }
+
+  function eventPlaybackChange(e){
+    videoRef.current.defaultPlaybackRate = parseFloat(e.target.value)
+  };
 
   // DOWNLOADS
   function eventDownloadCoords(){
     downloadCSV(LandMarkDataCoords);
-  }
+  };
   function eventDownloadAngles(){
     downloadCSV(LandMarkDataAngles);
-  }
+  };
   function eventDownloadAll(){
     downloadCSV(LandMarkDataALL);
-  }
+  };
 
 
 
@@ -550,25 +547,13 @@ function HandTracker(){
   }
 
   //HANDS
-  function onChangeminDetectionConfidence(e){
-    setminDetectionConfidence_in(e.target.value);
-  }
-  function onChangeminTrackingConfidence(e){
-    setminTrackingConfidence_in(e.target.value);
-  }
-
-  function configHands(e){
-    e.preventDefault();
-    setminDetectionConfidence(parseInt(minDetectionConfidence_in));
-    setminTrackingConfidence(parseInt(minTrackingConfidence_in));
-    console.log(minDetectionConfidence_in,minTrackingConfidence_in);
-  }
   function resetCollection(e){
     LandMarkDataALL.length = 0;
     LandMarkDataCoords.length = 0;
     LandMarkDataAngles.length = 0;
   }
 
+  
   return(
     <div className="container-hand-tracker">
       <div className="panel-row">
@@ -577,13 +562,13 @@ function HandTracker(){
           
           <h1>CONTROLS</h1>
           <div className="container-controls">
-          <h2>Model Config (not working)</h2>
+          <h2>Model Config</h2>
           <form className="control-form">
           <label className="field-label">Min. Detection Conf.</label>
-          <input className="input-box" type="text" value={minDetectionConfidence_in} onChange={(e)=>onChangeminDetectionConfidence(e)} placeholder="1" />
+          <input className="input-box" type="text" onChange={(e)=>setminDetectionConfidence(parseFloat(e.target.value))} placeholder="0.7" />
           <label className="field-label">Min. Tracking Conf.</label>
-          <input className="input-box" type="text" value={minTrackingConfidence_in} onChange={(e)=>onChangeminTrackingConfidence(e)} placeholder="1" />
-          <button className="button-form" onClick={configHands}>Set</button>
+          <input className="input-box" type="text" onChange={(e)=>setminTrackingConfidence(parseFloat(e.target.value))} placeholder="0.75" />
+          {/* <button className="button-form" onClick={configHands}>Set</button> */}
           </form>
           <hr className="container-sep"/>
           <h2>Capture Mode</h2>
@@ -595,9 +580,10 @@ function HandTracker(){
           <h2>Upload</h2>
           <form className="container-upload">
           <input className="input-file" type='file' multiple onChange={(e)=>onChangeUpload(e)}/>
-          <p> Please note the video file names <b>must</b> follow the below naming convention <br/><i>&lt;two letter patient initials&gt; &lt;MM/YY&gt; &lt;hand: lt|rt&gt; &lt;side: Pal|Rad|Uln&gt; &lt;angle(?): olb|side&gt; &lt;final pose: fist|ext|IM&gt;</i></p>
-          {/* <button className="button-form" >Play</button> */}
-          {/* <button className="button-form">Pause</button> */}
+          <p>Current file: {current_file}</p>
+          <p>Please note the video file names <b>must</b> follow the below naming convention <br/><i>&lt;two letter patient initials&gt; &lt;MM/YY&gt; &lt;hand: lt|rt&gt; &lt;side: Pal|Rad|Uln&gt; &lt;angle(?): olb|side&gt; &lt;final pose: fist|ext|IM&gt;</i></p>
+          {/* <label className="field-label">Video Playback Rate:</label>
+          <input className="input-box" type="text" onChange={(e)=>eventPlaybackChange(e)} placeholder="1" /> */}
           </form>
           <hr className="container-sep"/>
           <h2>Download</h2>
@@ -621,9 +607,10 @@ function HandTracker(){
             <video 
               ref={videoRef} 
               className="output-video" 
-              src={filesSrc[video_index]} 
-              onEnded = {() => setVideoIndex((idx) => idx + 1)}
-              autoPlay
+              src={filesSrc[file_index]} 
+              autoPlay = {video_play}
+              onEnded = {incrFileIndex}
+              controls
             >Video is not support in this browser</video>
             )}
             {/* Outputs */}
@@ -650,7 +637,6 @@ function HandTracker(){
               <canvas ref={canvasRefDiagram} id ="diagram_out" className="diagram"/> 
               <img id="diagram_preload" src={diagram} alt="hand diagram" className="diagrams_src"/>
               <hr className="container-sep"/>
-
               <h2>Read Outs</h2>
               {/* <p>res height: {camRes1}</p>
               <p>res width: {camRes2}</p>
@@ -662,7 +648,6 @@ function HandTracker(){
             
           </div>
         </div>
-
       </div>
     </div>
   )

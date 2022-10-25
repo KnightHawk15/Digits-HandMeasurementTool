@@ -46,8 +46,14 @@ p {
 .buttton-switch{
   display: flex;
   justify-content: center;
+  flex-direction: row;
 }
 
+.video-controls{
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+}
 
 .control-form {
   height: 20%;
@@ -196,13 +202,13 @@ p {
   width:auto;
 }
 
-.button-csv:hover{
-  background-color: #fff;
-  border-radius:1px solid rgb(98, 0, 209);
-  color:rgb(98, 0, 209);
+.button-form:hover{
   cursor: pointer;
 }
 
+.button-form:active{
+  background: #4B91F7;
+}
 
 
 .input-box{
