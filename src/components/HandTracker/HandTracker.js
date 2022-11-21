@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import './HandTracker.css';
 import Webcam from 'react-webcam';
 import {Hands} from '@mediapipe/hands'; 
@@ -20,6 +20,7 @@ const LandMarkDataAngles = [];
 const file_names = [];
 var mp_hands = null;
 var current_file = "";
+var file_attr = [];
 
 function HandTracker(){
 
@@ -60,11 +61,24 @@ function HandTracker(){
   }
 
   const downloadCSV = (arrayOfObjects=[]) =>{
-    if (!arrayOfObjects.length) {
+  console.log(arrayOfObjects);
+  let measurements = arrayOfObjects;
+    if (!measurements.length) {
       return alert('No data available for download.');
   }
+
+  // Last measurement flagging
+  let temp_file = measurements[0][18]; //get first file_name
+  for(let i = 0; i < measurements.length; i++){
+    if(temp_file !== measurements[i][18]){
+      measurements[i-1][17] = true;
+      temp_file = measurements[i][18];
+    }
+  }
+  measurements[measurements.length - 1][17] = true;
+
   let csvContent = "data:text/csv;charset=utf-8,";
-  arrayOfObjects.forEach((item)=>{
+  measurements.forEach((item)=>{
       csvContent += objectToCSVRow(item);
   }); 
     let encodedUri = encodeURI(csvContent);
@@ -120,7 +134,7 @@ function HandTracker(){
       361,//canvasElementDiagram.height*0.9,
       604//canvasElementDiagram.height
     );
-    if(objArr.multiHandedness[0].label == "Right"){
+    if(objArr.multiHandedness[0].label === "Right"){
       setDiagram(diagram_left);
       for(let i=1; i<16; i++){
         canvasCtxDia.fillText(
@@ -144,10 +158,29 @@ function HandTracker(){
     }
 
     LandMarkDataCoords.push(coordinates);
-    angles.push(current_file);
-    LandMarkDataAngles.push(angles);
-    LandMarkDataALL.push([coordinates,angles]);
 
+    var temp_file = current_file.slice(7,-4);
+    if(temp_file[0] === "C"){
+          temp_file = temp_file.slice(2)
+          temp_file = "true " + temp_file;
+    }
+    else {
+      temp_file = "false " + temp_file;
+    }
+    // temp_file = temp_file.replace(" ","");
+    if(!temp_file.includes("copy")){
+      temp_file = temp_file.concat(" copy 1");
+    }
+    temp_file = temp_file.replace("copy ","");
+    file_attr = temp_file.split(" ");
+    if(file_attr.length !== 6){
+      file_attr = ["INCORRECT FILENAME"];
+    }
+    
+    angles.push(file_attr,false,current_file);
+    LandMarkDataAngles.push(angles);
+    // console.log(LandMarkDataAngles);
+    LandMarkDataALL.push([coordinates,angles]);
   }
 
 
@@ -188,7 +221,7 @@ function HandTracker(){
     //Section 2
     for(let j = 1; j<5; j++){
       //initially add 4 after first increment 
-      if(j==1){
+      if(j===1){
         let vx = ((coordinates[j+5][0]* camRes1)-(coordinates[j][0]* camRes1));
         let vy = ((coordinates[j+5][1]* camRes2)-(coordinates[j][1]* camRes2));
         let vz = ((coordinates[j+5][2]* camRes1)-(coordinates[j][2]* camRes1));
@@ -217,7 +250,7 @@ function HandTracker(){
     //Section 3
     for(let k = 1; k<5; k++){
       //initially add 4 after first increment 
-      if(k==1){
+      if(k===1){
         let vx = ((coordinates[k+9][0]* camRes1)-(coordinates[k][0]* camRes1));
         let vy = ((coordinates[k+9][1]* camRes2)-(coordinates[k][1]* camRes2));
         let vz = ((coordinates[k+9][2]* camRes1)-(coordinates[k][2]* camRes1));
@@ -247,7 +280,7 @@ function HandTracker(){
     //Section 4
     for(let u = 1; u<5; u++){
       //initially add 4 after first increment 
-      if(u==1){
+      if(u===1){
         let vx = ((coordinates[u+13][0]* camRes1)-(coordinates[u][0]* camRes1));
         let vy = ((coordinates[u+13][1]* camRes2)-(coordinates[u][1]* camRes2));
         let vz = ((coordinates[u+13][2]* camRes1)-(coordinates[u][2]* camRes1));
@@ -275,7 +308,7 @@ function HandTracker(){
     //Section 5
     for(let v = 1; v<5; v++){
       //initially add 4 after first increment 
-      if(v==1){
+      if(v===1){
         let vx = ((coordinates[v+17][0]* camRes1)-(coordinates[v][0]* camRes1));
         let vy = ((coordinates[v+17][1]* camRes2)-(coordinates[v][1]* camRes2));
         let vz = ((coordinates[v+17][2]* camRes1)-(coordinates[v][2]* camRes1));
@@ -299,6 +332,7 @@ function HandTracker(){
     }
 
     allVectors.push(vectors1, vectors2, vectors3, vectors4, vectors5)
+    // console.log(allVectors);
     return allVectors;
   }
 
@@ -354,6 +388,7 @@ function HandTracker(){
 
   const angle = (vectorOne, vectorTwo, magnitudeOne, magnitudeTwo) => {
     let dotProductResult = dotProduct(vectorOne, vectorTwo);
+    // let crossProductResult = crossProduct(vectorOne,vectorTwo);
     let innerCalculation = dotProductResult/(magnitudeOne*magnitudeTwo);
     let angleResult = Math.acos(innerCalculation);
     angleResult = parseFloat(angleResult) * (180/Math.PI);
@@ -364,6 +399,16 @@ function HandTracker(){
   const dotProduct = (v1, v2) =>{
     let result = (v1[0]*v2[0])+(v1[1]*v2[1])+(v1[2]*v2[2]);
     return result; 
+  }
+
+  const crossProduct = (v1, v2) => {
+    let result = []
+    result.push(
+      (v1[1]*v2[2]-v2[1]*v1[2]),
+      -1*(v1[0]*v2[2]-v2[0]*v1[2]),
+      (v1[0]*v2[1]-v2[0]*v1[1])
+    )
+    return result
   }
 
   const abs = (x,y,z) =>{
@@ -502,9 +547,9 @@ function HandTracker(){
     setFileIndex((file_index) => file_index + 1);
     setVideoPlay(true);
     if(file_index < file_names.length){
-      current_file = file_names[file_index+1]
+      current_file = file_names[file_index+1];
     }
-    console.log("file name: ",current_file,"file index: ", file_index)
+    // console.log("file name: ",current_file,"file index: ", file_index);
   }
 
   function eventPlaybackChange(e){
@@ -581,7 +626,8 @@ function HandTracker(){
           <form className="container-upload">
           <input className="input-file" type='file' multiple onChange={(e)=>onChangeUpload(e)}/>
           <p>Current file: {current_file}</p>
-          <p>Please note the video file names <b>must</b> follow the below naming convention <br/><i>&lt;two letter patient initials&gt; &lt;MM/YY&gt; &lt;hand: lt|rt&gt; &lt;side: Pal|Rad|Uln&gt; &lt;angle(?): olb|side&gt; &lt;final pose: fist|ext|IM&gt;</i></p>
+          
+          <p>Please note the video file names <b>must</b> follow the below naming convention <br/><i>DIGITS &lt;C indicating a control, blank otherwise&gt; &lt;Patient No.&gt; &lt;Hand: lt|rt&gt; &lt;View&gt; &lt;Pose&gt; &lt;Trial: copy # or blank for the first trial&gt;</i><br/> Ex. <i>DIGITS C 79 Lt Palmar Ext copy 3.mov</i> or <i>DIGITS 79 Lt Palmar Ext.mov</i></p>
           {/* <label className="field-label">Video Playback Rate:</label>
           <input className="input-box" type="text" onChange={(e)=>eventPlaybackChange(e)} placeholder="1" /> */}
           </form>
@@ -611,11 +657,13 @@ function HandTracker(){
               autoPlay = {video_play}
               onEnded = {incrFileIndex}
               controls
+              muted
             >Video is not support in this browser</video>
             )}
             {/* Outputs */}
             <canvas ref={canvasRef} className="output-canvas"/>
-
+            <p>Number of records: {countData(LandMarkDataAngles)}</p>
+            
             
             <hr className="container-sep"/>
             <div className="resolution-config">
