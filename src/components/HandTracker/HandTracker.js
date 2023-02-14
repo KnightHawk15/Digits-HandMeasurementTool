@@ -68,14 +68,12 @@ function HandTracker(){
   }
 
   // Last measurement flagging
-  let temp_file = measurements[0][18]; //get first file_name
+  let temp_file = measurements[0][17]; //get first file_name
   for(let i = 0; i < measurements.length; i++){
-    if(temp_file !== measurements[i][18]){
-      measurements[i-1][17] = true;
-      temp_file = measurements[i][18];
+    if(temp_file !== measurements[i][17]){
+      temp_file = measurements[i][17];
     }
   }
-  measurements[measurements.length - 1][17] = true;
 
   let csvContent = "data:text/csv;charset=utf-8,";
   measurements.forEach((item)=>{
@@ -159,25 +157,25 @@ function HandTracker(){
 
     LandMarkDataCoords.push(coordinates);
 
-    var temp_file = current_file.slice(7,-4);
-    if(temp_file[0] === "C"){
-          temp_file = temp_file.slice(2)
-          temp_file = "true " + temp_file;
-    }
-    else {
-      temp_file = "false " + temp_file;
-    }
-    // temp_file = temp_file.replace(" ","");
-    if(!temp_file.includes("copy")){
-      temp_file = temp_file.concat(" copy 1");
-    }
-    temp_file = temp_file.replace("copy ","");
-    file_attr = temp_file.split(" ");
-    if(file_attr.length !== 6){
-      file_attr = ["INCORRECT FILENAME"];
-    }
+    // var temp_file = current_file;
+    // if(temp_file[0] === "C"){
+    //       temp_file = temp_file.slice(2)
+    //       temp_file = "true " + temp_file;
+    // }
+    // else {
+    //   temp_file = "false " + temp_file;
+    // }
+    // // temp_file = temp_file.replace(" ","");
+    // if(!temp_file.includes("copy")){
+    //   temp_file = temp_file.concat(" copy 1");
+    // }
+    // temp_file = temp_file.replace("copy ","");
+    // file_attr = temp_file.split(" ");
+    // if(file_attr.length !== 6){
+    //   file_attr = ["INCORRECT FILENAME"];
+    // }
     
-    angles.push(file_attr,false,current_file);
+    angles.push(current_file);
     LandMarkDataAngles.push(angles);
     // console.log(LandMarkDataAngles);
     LandMarkDataALL.push([coordinates,angles]);
