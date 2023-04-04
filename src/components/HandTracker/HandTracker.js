@@ -8,9 +8,7 @@ import {useRef, useEffect, useState} from 'react';
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 import diagram_left from './skeleton_left.png';
 import diagram_right from './skeleton_right.png';
-// import temp_upload from './testing_10sec.mp4';
 import { diagram_map } from './map';
-// import ReactPlayer from 'react-player'
 
 const startTime = Date.now();
 
@@ -20,7 +18,6 @@ const LandMarkDataAngles = [];
 const file_names = [];
 var mp_hands = null;
 var current_file = "";
-var file_attr = [];
 
 function HandTracker(){
 
@@ -155,26 +152,8 @@ function HandTracker(){
         }
     }
 
+    // Push landmark data
     LandMarkDataCoords.push(coordinates);
-
-    // var temp_file = current_file;
-    // if(temp_file[0] === "C"){
-    //       temp_file = temp_file.slice(2)
-    //       temp_file = "true " + temp_file;
-    // }
-    // else {
-    //   temp_file = "false " + temp_file;
-    // }
-    // // temp_file = temp_file.replace(" ","");
-    // if(!temp_file.includes("copy")){
-    //   temp_file = temp_file.concat(" copy 1");
-    // }
-    // temp_file = temp_file.replace("copy ","");
-    // file_attr = temp_file.split(" ");
-    // if(file_attr.length !== 6){
-    //   file_attr = ["INCORRECT FILENAME"];
-    // }
-    
     angles.push(current_file);
     LandMarkDataAngles.push(angles);
     // console.log(LandMarkDataAngles);
@@ -386,7 +365,6 @@ function HandTracker(){
 
   const angle = (vectorOne, vectorTwo, magnitudeOne, magnitudeTwo) => {
     let dotProductResult = dotProduct(vectorOne, vectorTwo);
-    // let crossProductResult = crossProduct(vectorOne,vectorTwo);
     let innerCalculation = dotProductResult/(magnitudeOne*magnitudeTwo);
     let angleResult = Math.acos(innerCalculation);
     angleResult = parseFloat(angleResult) * (180/Math.PI);
@@ -397,16 +375,6 @@ function HandTracker(){
   const dotProduct = (v1, v2) =>{
     let result = (v1[0]*v2[0])+(v1[1]*v2[1])+(v1[2]*v2[2]);
     return result; 
-  }
-
-  const crossProduct = (v1, v2) => {
-    let result = []
-    result.push(
-      (v1[1]*v2[2]-v2[1]*v1[2]),
-      -1*(v1[0]*v2[2]-v2[0]*v1[2]),
-      (v1[0]*v2[1]-v2[0]*v1[1])
-    )
-    return result
   }
 
   const abs = (x,y,z) =>{
@@ -420,7 +388,6 @@ function HandTracker(){
     return size;
   };
 
-
   const onResults = (results)=>{
     let videoWidth = 200;
     let videoHeight = 200;
@@ -431,8 +398,6 @@ function HandTracker(){
       videoWidth = 168;
       videoHeight = 300;
     }
-
-
 
     //Sets height and width of canvas 
     canvasRef.current.width = videoWidth;
@@ -472,11 +437,8 @@ function HandTracker(){
 
     // Load MP Hands
     camera = null;
-
     const mdc = minDetectionConfidence;
     const mtc = minTrackingConfidence;
-    
-
 
     //const mp_hands = new Hands({
     mp_hands = new Hands({
@@ -532,6 +494,7 @@ function HandTracker(){
     file_names.length = 0;
     
     const srcs = [];
+    // Autoplay through the uploaded videos
     for(let i = 0; i < files.length; i++){
       srcs.push(URL.createObjectURL(files[i]));
       file_names.push(files[i].name);
@@ -549,10 +512,6 @@ function HandTracker(){
     }
     // console.log("file name: ",current_file,"file index: ", file_index);
   }
-
-  function eventPlaybackChange(e){
-    videoRef.current.defaultPlaybackRate = parseFloat(e.target.value)
-  };
 
   // DOWNLOADS
   function eventDownloadCoords(){
@@ -584,12 +543,13 @@ function HandTracker(){
     setResWidth("");
     console.log(res_height, res_width);
   }
+  //INPUT MODE
   function onChangeInputMode(){
     setinputMode(!input_mode);
 
   }
 
-  //HANDS
+  //DATA RESET
   function resetCollection(e){
     LandMarkDataALL.length = 0;
     LandMarkDataCoords.length = 0;
@@ -625,7 +585,7 @@ function HandTracker(){
           <input className="input-file" type='file' multiple onChange={(e)=>onChangeUpload(e)}/>
           <p>Current file: {current_file}</p>
           
-          <p>Please note the video file names <b>must</b> follow the below naming convention <br/><i>DIGITS &lt;C indicating a control, blank otherwise&gt; &lt;Patient No.&gt; &lt;Hand: lt|rt&gt; &lt;View&gt; &lt;Pose&gt; &lt;Trial: copy # or blank for the first trial&gt;</i><br/> Ex. <i>DIGITS C 79 Lt Palmar Ext copy 3.mov</i> or <i>DIGITS 79 Lt Palmar Ext.mov</i></p>
+          <p>Please note the data will be identified using the filename in the output</p>
           {/* <label className="field-label">Video Playback Rate:</label>
           <input className="input-box" type="text" onChange={(e)=>eventPlaybackChange(e)} placeholder="1" /> */}
           </form>
