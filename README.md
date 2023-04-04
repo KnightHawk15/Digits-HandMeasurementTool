@@ -1,6 +1,6 @@
 # About Digits
 
-This is a react application built off [MediaPipe Hands](https://developers.google.com/mediapipe/solutions/vision/hand_landmarker) by Google. The main goal is to accurately identify the angle of a user's finger joints. *PLEASE NOTE:* This app is built for research purposes only and requires more work before rolled out in any out facing capacity.
+This is a react application built off [MediaPipe Hands](https://developers.google.com/mediapipe/solutions/vision/hand_landmarker) by Google. The main goal is to accurately identify the angle of a user's finger joints. *PLEASE NOTE: This app is built for research purposes only and requires more work before rolled out in any out facing capacity.*
 
 ## Available Scripts
 
