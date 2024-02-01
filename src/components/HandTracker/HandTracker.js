@@ -6,15 +6,20 @@ import * as hands from '@mediapipe/hands';
 import * as cam from '@mediapipe/camera_utils';
 import {useRef, useEffect, useState} from 'react';
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
-import diagram_left from './skeleton_left.png';
-import diagram_right from './skeleton_right.png';
-import { diagram_map } from './map';
+import diagram_left from './Images/joints-angles-left.png';
+import diagram_right from './Images/joints-angles-right.png';
+import diagram_tips_distance from "./Images/tips-distance.png";
+import diagram_wrist_tips_angles from "./Images/wrist-tips-angles.png";
+import diagram_pinky_index_distance from "./Images/pinky-index-distance.png";
+import { joints_angles, tips_distance, tips_angles } from './diagram-map';
 
 const startTime = Date.now();
 
 const LandMarkDataALL = [];
 const LandMarkDataCoords = [];
 const LandMarkDataAngles = [];
+const LandMarkDataDistances = [];
+
 const file_names = [];
 var mp_hands = null;
 var current_file = "";
@@ -26,18 +31,23 @@ function HandTracker(){
   const webCamRef = useRef(null);
   const canvasRef = useRef(null);
   const canvasRefDiagram = useRef(null);
+  const canvasRefTips = useRef(null);
+  const canvasRefTipsAngles = useRef(null);
+  const canvasRefIPDist = useRef(null);
   const [diagram, setDiagram] = useState(diagram_right);
+  const [digit_x, setDigit_x] = useState(0);
+  const [digit_y, setDigit_y] = useState(0);
   const [digit_z, setDigit_z] = useState(0);
   const [camRes1, setCamRes1] = useState(720);
   const [camRes2, setCamRes2] = useState(1280);
   const [res_height, setResHeight] = useState(720);
   const [res_width, setResWidth] = useState(1280);
-
   let camera = null;  
 
   // Model Config
   const [minDetectionConfidence, setminDetectionConfidence] = useState(0.75);
   const [minTrackingConfidence, setminTrackingConfidence] = useState(0.7);
+  const [indexLength, setIndexLength] = useState(9);
   
   // Video:
   const [filesSrc, setFilesSrc] = useState(null); // array for the uploaded videos
@@ -58,7 +68,7 @@ function HandTracker(){
   }
 
   const downloadCSV = (arrayOfObjects=[]) =>{
-  console.log(arrayOfObjects);
+  // console.log(arrayOfObjects);
   let measurements = arrayOfObjects;
     if (!measurements.length) {
       return alert('No data available for download.');
@@ -102,56 +112,152 @@ function HandTracker(){
       //Push the points to an array reducing to 6 decimal points 
       coordinates.push([parseFloat(xVal), parseFloat(yVal), parseFloat(zVal)]);
     }
-    
+    setDigit_x(coordinates[9][0]*camRes1);
+    setDigit_y(coordinates[9][1]*camRes2);
+    setDigit_z(coordinates[9][2]*camRes1);
     const vectors = convertToVector(coordinates);
     const magnitudes =  calculateMagnitude(vectors);
+
+    //Full Finger Angles:
+    const coordinatesFF = [coordinates[1],coordinates[5],coordinates[9],coordinates[13],coordinates[17],coordinates[21]];
+    const [vectorsFF, magnitudeFF] = convertToVectorFullFinger(coordinatesFF);
+    const anglesFF = calculateAngleFullFinger(vectorsFF,magnitudeFF,deltaTime);
+
     const angles = calculateAngle(vectors, magnitudes, deltaTime);
+    const distances = calculateDistances(coordinates)
     
+    // console.log("Index coords:" + coordinates[9][0]*camRes1 + "," + coordinates[9][1]*camRes2 + "," + coordinates[9][2]*camRes1)
+    // console.log("Pinky coords:" + coordinates[21][0]*camRes1 + "," + coordinates[21][1]*camRes2 + "," + coordinates[21][2]*camRes1)
     
-    
-    // Diagram
+    // Diagrams
+
 
     const canvasElementDiagram = canvasRefDiagram.current;
     const canvasCtxDia = canvasElementDiagram.getContext("2d");//.setTransform(2, 0, 0, 2, 0, 0);
-    canvasElementDiagram.width = 361;
-    canvasElementDiagram.height = 604;
+    canvasElementDiagram.width = 296.5;
+    canvasElementDiagram.height = 351;
     canvasCtxDia.imageSmoothingEnabled = false;
 
     var img = document.getElementById("diagram_preload");
     canvasCtxDia.save();
-    canvasCtxDia.fillStyle = "#DB0E00";
-    canvasCtxDia.font = "24px Arial";
+    canvasCtxDia.fillStyle = "#fff";
+    canvasCtxDia.font = "9px Arial";
+    canvasCtxDia.textAlign = "center";
     canvasCtxDia.clearRect(0,0,canvasElementDiagram.width,canvasElementDiagram.height);
     canvasCtxDia.drawImage(
       img,
       0,
       0,
-      361,//canvasElementDiagram.height*0.9,
-      604//canvasElementDiagram.height
+      296.5,//canvasElementDiagram.height*0.9,
+      351//canvasElementDiagram.height
     );
     if(objArr.multiHandedness[0].label === "Right"){
-      setDiagram(diagram_left);
+      setDiagram(diagram_right);
       for(let i=1; i<16; i++){
         canvasCtxDia.fillText(
           String(Math.round(angles[i])),
-          361 - (diagram_map[i-1][0])*1,
-          (diagram_map[i-1][1])*1
+          296.5 - (joints_angles[i-1][0]),
+          (joints_angles[i-1][1])
   
         )
       }
     }
     else {
-        setDiagram(diagram_right);
+        setDiagram(diagram_left);
         for(let i=1; i<16; i++){
           canvasCtxDia.fillText(
             String(Math.round(angles[i])),
-            (diagram_map[i-1][0])*1,
-            (diagram_map[i-1][1])*1
+            (joints_angles[i-1][0]),
+            (joints_angles[i-1][1])
     
           )
         }
     }
 
+    const canvasElementTips = canvasRefTips.current;
+    const canvasCtxTips = canvasElementTips.getContext("2d");//.setTransform(2, 0, 0, 2, 0, 0);
+    canvasElementTips.width = 296.5;
+    canvasElementTips.height = 351;
+    canvasCtxTips.imageSmoothingEnabled = false;
+
+    img = document.getElementById("diagram_preload_tips");
+    canvasCtxTips.save();
+    canvasCtxTips.fillStyle = "#000";
+    canvasCtxTips.font = "9px Arial";
+    canvasCtxTips.textAlign = "center";
+    canvasCtxTips.clearRect(0,0,canvasElementTips.width,canvasElementTips.height);
+    canvasCtxTips.drawImage(
+      img,
+      0,
+      0,
+      296.5,
+      351
+    );
+    for(let i=0; i<tips_distance.length; i++){
+      canvasCtxTips.fillText(
+        String(Math.round(distances[i])),
+        (tips_distance[i][0]),
+        (tips_distance[i][1])
+
+      )
+      }
+
+      const canvasElementTipsAngles = canvasRefTipsAngles.current;
+      const canvasCtxTipsAngles = canvasElementTipsAngles.getContext("2d");//.setTransform(2, 0, 0, 2, 0, 0);
+      canvasElementTipsAngles.width = 296.5;
+      canvasElementTipsAngles.height = 351;
+      canvasCtxTipsAngles.imageSmoothingEnabled = false;
+  
+      img = document.getElementById("diagram_preload_tips_angles");
+      canvasCtxTipsAngles.save();
+      canvasCtxTipsAngles.fillStyle = "#000";
+      canvasCtxTipsAngles.font = "9px Arial";
+      canvasCtxTipsAngles.textAlign = "center";
+      canvasCtxTipsAngles.clearRect(0,0,canvasElementTipsAngles.width,canvasElementTipsAngles.height);
+      canvasCtxTipsAngles.drawImage(
+        img,
+        0,
+        0,
+        296.5,
+        351
+      );
+
+
+      for(let i=0; i<tips_angles.length; i++){
+        canvasCtxTipsAngles.fillText(
+          String(Math.round(anglesFF[i+1])),
+          (tips_angles[i][0]),
+          (tips_angles[i][1])
+  
+        )
+        }
+      
+        const canvasElementIPDist = canvasRefIPDist.current;
+        const canvasCtxIPDist = canvasElementIPDist.getContext("2d");//.setTransform(2, 0, 0, 2, 0, 0);
+        canvasElementIPDist.width = 296.5;
+        canvasElementIPDist.height = 351;
+        canvasCtxIPDist.imageSmoothingEnabled = false;
+    
+        img = document.getElementById("diagram_preload_IPDist");
+        canvasCtxIPDist.save();
+        canvasCtxIPDist.fillStyle = "#000";
+        canvasCtxIPDist.font = "9px Arial";
+        canvasCtxIPDist.textAlign = "center";
+        canvasCtxIPDist.clearRect(0,0,canvasElementIPDist.width,canvasElementIPDist.height);
+        canvasCtxIPDist.drawImage(
+          img,
+          0,
+          0,
+          296.5,
+          351
+        );
+        canvasCtxIPDist.fillText(
+          String(Math.round(distances[4])),
+          124,
+          54
+        )
+        
+      
     // Push landmark data
     LandMarkDataCoords.push(coordinates);
     angles.push(current_file);
@@ -160,20 +266,37 @@ function HandTracker(){
     LandMarkDataALL.push([coordinates,angles]);
   }
 
-
+  const convertToVectorFullFinger = (coordinates) => {
+    const vectors = [];
+    for(let i = 1; i<coordinates.length; i++){
+      const vx = (coordinates[i][0] - coordinates[0][0])*camRes1;
+      const vy = (coordinates[i][1] - coordinates[0][1])*camRes2;
+      const vz = (coordinates[i][2] - coordinates[0][2])*camRes1;
+      vectors.push([parseFloat(vx),parseFloat(vy),parseFloat(vz)])
+    }
+    const magnitudes = [];
+    for(let j = 0; j < vectors.length; j++){
+      magnitudes.push(
+        parseFloat(abs(vectors[j][0],vectors[j][1],vectors[j][2]))
+      );
+    }
+    return [vectors, magnitudes];
+  }
 
   //Checks out 
   const convertToVector = (coordinates) =>{
-    //Landmark 0 --> Landmark 4
+    //console.log(coordinates[8][1]);
+    //Landmark 0 --> Landmark 4 (0,1,2,3,4)
     const vectors1 = [];
-    //Landmark 0 --> Landmark 8
+    //Landmark 0 --> Landmark 8 (0,5,6,7,8)
     const vectors2 = [];
-    //Landmark 0 --> Landmark 12
+    //Landmark 0 --> Landmark 12 (0,9,10,11,12)
     const vectors3 = [];
-    //Landmark 0 --> Landmark 16
+    //Landmark 0 --> Landmark 16 (0,13,14,15,16)
     const vectors4 = [];
-    //Landmark 0 --> Landmark 20
+    //Landmark 0 --> Landmark 20 (0,17,18,19,20)
     const vectors5 = [];
+
     //Each set of vectors 
     const allVectors = [];
     //camRes1 => x,z camRes2 => y 
@@ -309,7 +432,10 @@ function HandTracker(){
     }
 
     allVectors.push(vectors1, vectors2, vectors3, vectors4, vectors5)
-    // console.log(allVectors);
+    // console.log(normalize(vectors2[0]));
+    // console.log(normalize(vectors2[1]));
+    // console.log(normalize(vectors2[2]));
+    // console.log(normalize(vectors2[3]));
     return allVectors;
   }
 
@@ -330,8 +456,40 @@ function HandTracker(){
     }
     return magnitudes;
   }
+  
+  // Helper Func: Distance between two 3D points
+  const dbP = (p1,p2) => {
+    return parseFloat(Math.sqrt(
+        Math.pow(camRes1*(p2[0]-p1[0]),2)+
+        Math.pow(camRes2*(p2[1]-p1[1]),2)+
+        Math.pow(camRes1*(p2[2]-p1[2]),2)
+      ));
+    // return Math.sqrt((p2[0]-p1[0])^2+(p2[2]-p1[2])^2+(p2[1]-p1[1])^2);
+  }
 
-  //Check 
+  const calculateDistances = (coordinates) => {
+    const distances = []; 
+    const pixelScale = indexLength/dbP(coordinates[6],coordinates[9]);
+
+    distances.push(dbP(coordinates[5],coordinates[9]));
+    distances.push(dbP(coordinates[9],coordinates[13]));
+    distances.push(dbP(coordinates[13],coordinates[17]));
+    distances.push(dbP(coordinates[17],coordinates[21]));
+    distances.push(dbP(coordinates[9],coordinates[21])); //index -> pinky
+
+    for(let i = 0; i < distances.length; i++){
+      distances[i] = distances[i]*pixelScale;
+    }
+
+    return distances;
+  }
+
+  const normalize = (vector) => {
+    const magnitude = Math.sqrt(vector[0]^2 + vector[1]^2 + vector[2]^2);
+    return [vector[0]/magnitude,vector[1]/magnitude,vector[2]/magnitude];
+  }
+  
+
   const calculateAngle = (vectors, magnitudes, time) => {
     const angles = [time];
     
@@ -341,26 +499,19 @@ function HandTracker(){
     angles.push(angle(vectors[set][1], vectors[set][2], magnitudes[set][1], magnitudes[set][2]));
     angles.push(angle(vectors[set][2], vectors[set][3], magnitudes[set][2], magnitudes[set][3]));
   }
-
-  /*
-  //Vector 
-   let ThumbCMC	= angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let ThumbMCP	= angle(vectors[0][1], vectors[0][2], magnitudes[1], magnitudes[2]);
-   let ThumbIP = angle(vectors[0][2], vectors[0][3], magnitudes[0], magnitudes[1]);
-   let IndexMCP	= angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let IndexPIP	= angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let IndexDIP	= angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let LongMCP = angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let LongPIP = angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let LongDIP = angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let RingMCP = angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let RingPIP = angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let RingDIP = angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let SmallMCP	= angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let SmallPIP = angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   let SmallDIP = angle(vectors[0][0], vectors[0][1], magnitudes[0], magnitudes[1]);
-   */
+  // console.log(angles);
   return angles;
+  }
+
+  const calculateAngleFullFinger = (vectors, magnitudes, time) => {
+    const angles = [time];
+
+    angles.push(angle(vectors[0],vectors[1],magnitudes[0],magnitudes[1]));
+    angles.push(angle(vectors[1],vectors[2],magnitudes[1],magnitudes[2]));
+    angles.push(angle(vectors[2],vectors[3],magnitudes[2],magnitudes[3]));
+    angles.push(angle(vectors[3],vectors[4],magnitudes[3],magnitudes[4]));
+
+    return angles
   }
 
   const angle = (vectorOne, vectorTwo, magnitudeOne, magnitudeTwo) => {
@@ -424,9 +575,6 @@ function HandTracker(){
         drawLandmarks(canvasCtx, landmarks, {color: "#00ffd0", lineWidth: 1});//#5d0db8 purple
       
       }
-      
-      const z = results.multiHandLandmarks[0][0].z;
-      setDigit_z(z);
 
       collectData(results);
     }
@@ -561,49 +709,9 @@ function HandTracker(){
     <div className="container-hand-tracker">
       <div className="panel-row">
 
-        <div className="panel-controls">
-          
-          <h1>CONTROLS</h1>
-          <div className="container-controls">
-          <h2>Model Config</h2>
-          <form className="control-form">
-          <label className="field-label">Min. Detection Conf.</label>
-          <input className="input-box" type="text" onChange={(e)=>setminDetectionConfidence(parseFloat(e.target.value))} placeholder="0.7" />
-          <label className="field-label">Min. Tracking Conf.</label>
-          <input className="input-box" type="text" onChange={(e)=>setminTrackingConfidence(parseFloat(e.target.value))} placeholder="0.75" />
-          {/* <button className="button-form" onClick={configHands}>Set</button> */}
-          </form>
-          <hr className="container-sep"/>
-          <h2>Capture Mode</h2>
-          <div className='button-switch'>
-            <button className='button-webcam' onClick={onChangeInputMode} style = {{ backgroundColor: input_mode ? "#5DA85B" : "#FFF", color: input_mode ? "#fff" : "#000"}}>Webcam</button>
-            <button className='button-upload' onClick={onChangeInputMode} style = {{ backgroundColor: !input_mode ? "#5DA85B" : "#FFF", color: !input_mode ? "#fff" : "#000"}}>Upload</button>
-          </div>
-          <hr className="container-sep"/>
-          <h2>Upload</h2>
-          <form className="container-upload">
-          <input className="input-file" type='file' multiple onChange={(e)=>onChangeUpload(e)}/>
-          <p>Current file: {current_file}</p>
-          
-          <p>Please note the data will be identified using the filename in the output</p>
-          {/* <label className="field-label">Video Playback Rate:</label>
-          <input className="input-box" type="text" onChange={(e)=>eventPlaybackChange(e)} placeholder="1" /> */}
-          </form>
-          <hr className="container-sep"/>
-          <h2>Download</h2>
-          <form className="container-download">
-            <button className="button-form" onClick={eventDownloadCoords}>Coords</button>
-            <button className="button-form" onClick={eventDownloadAngles}>Angles</button>
-            <button className="button-form" onClick={eventDownloadAll}>All</button>
-          </form>
-          <hr className="container-sep"/>
-          <button className="button-form" onClick={resetCollection}>Reset Collection</button>
-          </div>
-        </div>
-
     
         <div className="panel-display">
-          <h1>DISPLAY</h1>
+          <h1>DISPLAY/CONTROLS</h1>
           <div className="container-display">
             {/* Inputs */}
             <Webcam ref={webCamRef} className="webcam"/>
@@ -622,36 +730,97 @@ function HandTracker(){
             <canvas ref={canvasRef} className="output-canvas"/>
             <p>Number of records: {countData(LandMarkDataAngles)}</p>
             
-            
             <hr className="container-sep"/>
-            <div className="resolution-config">
-            <label className="field-label">Camera Resolution:</label>
-              <input className="input-box" type="text" value={res_height} onChange={(e)=>onChangeResHeight(e)} placeholder="720p" />
-              <input className="input-box" type="text" value={res_width} onChange={(e)=>onChangeResWidth(e)} placeholder="1280p" />
-              <button className="button-form" onClick={setResolution}>Set</button>
-            </div>
-            
-          </div>
 
+            <div className="controls">
+              <div className="controls-cell">
+                <h2>Camera Resolution</h2>
+                <form className="control-form">
+                  <input className="input-box" type="text" value={res_height} onChange={(e)=>onChangeResHeight(e)} placeholder="720p" />
+                  <input className="input-box" type="text" value={res_width} onChange={(e)=>onChangeResWidth(e)} placeholder="1280p" />
+                  <button className="button-form" onClick={setResolution}>Set</button>
+                </form>
+              </div>
+              <div className='controls-cell'>
+                <h2>Model Config</h2>
+                <form className="control-form">
+                  <div className='formItem'>
+                    <label className="field-label">Min. Detection Conf.</label>
+                    <input className="input-box" type="text" onChange={(e)=>setminDetectionConfidence(parseFloat(e.target.value))} placeholder="0.7" />
+                  </div>
+                  <div className='formItem'>
+                    <label className="field-label">Min. Tracking Conf.</label>
+                    <input className="input-box" type="text" onChange={(e)=>setminTrackingConfidence(parseFloat(e.target.value))} placeholder="0.75" />
+                  </div>
+                  <div className='formItem'>
+                    <label className="field-label">Index Finger MCT - TIP</label>
+                    <input className="input-box" type="text" onChange={(e)=>setIndexLength(parseFloat(e.target.value))} placeholder="9" />
+                    {/* <button className="button-form" onClick={configHands}>Set</button> */}
+                  </div>
+                </form>
+              </div>
+              <div className='controls-cell'>
+                <h2>Capture Mode</h2>
+                <div className='button-switch'>
+                  <button className='button-webcam' onClick={onChangeInputMode} style = {{ backgroundColor: input_mode ? "#5DA85B" : "#FFF", color: input_mode ? "#fff" : "#000"}}>Webcam</button>
+                  <button className='button-upload' onClick={onChangeInputMode} style = {{ backgroundColor: !input_mode ? "#5DA85B" : "#FFF", color: !input_mode ? "#fff" : "#000"}}>Upload</button>
+                </div>
+              </div>
+              <div className='controls-cell'>
+                <h2>Upload</h2>
+                <form className="container-upload">
+                  <input className="input-file" type='file' multiple onChange={(e)=>onChangeUpload(e)}/>
+                  <p>Current file: {current_file}</p>
+                </form>
+              </div>
+              <div className='controls-cell'>
+                <h2>Download</h2>
+                <form className="container-download">
+                  <button className="button-form margin-push" onClick={eventDownloadCoords}>Coords</button>
+                  <button className="button-form margin-push" onClick={eventDownloadAngles}>Angles</button>
+                  <button className="button-form margin-push" onClick={eventDownloadAll}>All</button>
+                  <button className="button-form margin-push" onClick={resetCollection}>Reset Collection</button>
+                </form>
+                
+              </div>
+          
+          </div>
+          </div>
           
         </div>
 
         <div className="panel-data">
-          <h1>DATA</h1>
+          <h1>DIAGRAMS</h1>
           <div className="container-data">
-              <h2>Diagram</h2>
-              <canvas ref={canvasRefDiagram} id ="diagram_out" className="diagram"/> 
-              <img id="diagram_preload" src={diagram} alt="hand diagram" className="diagrams_src"/>
-              <hr className="container-sep"/>
+              <div className='diagram-grid'>
+                <div className='grid-cell'>
+                  <h2>Joint Angles (degrees)</h2>
+                  <canvas ref={canvasRefDiagram} id ="diagram_out" className="diagram"/> 
+                  <img id="diagram_preload" src={diagram} alt="hand diagram" className="diagrams_src"/>
+                </div>
+                <div className='grid-cell'>
+                  <h2>Tips Distances (cm)</h2>
+                  <canvas ref={canvasRefTips} id ="diagram_out" className="diagram"/> 
+                  <img id="diagram_preload_tips" src={diagram_tips_distance} alt="hand diagram" className="diagrams_src"/>
+                </div>
+                <div className='grid-cell'>
+                  <h2>Tips-Wrist Angles (degrees)</h2>
+                  <canvas ref={canvasRefTipsAngles} id ="diagram_out" className="diagram"/> 
+                  <img id="diagram_preload_tips_angles" src={diagram_wrist_tips_angles} alt="hand diagram" className="diagrams_src"/>
+                </div>
+                <div className='grid-cell'>
+                  <h2>Index-Pinky Distance (cm)</h2>
+                  <canvas ref={canvasRefIPDist} id ="diagram_out" className="diagram"/> 
+                  <img id="diagram_preload_IPDist" src={diagram_pinky_index_distance} alt="hand diagram" className="diagrams_src"/>
+                </div>
+              </div>
+              
+              {/* <hr className="container-sep"/>
               <h2>Read Outs</h2>
-              {/* <p>res height: {camRes1}</p>
-              <p>res width: {camRes2}</p>
-              <h2>Landmark_0</h2>
-              <p>X: {digit_x}</p>
-              <p>Y: {digit_y}</p>
-              <p>Z: {digit_z}</p> */}
+              <p><b>Resolution: </b>height: {camRes1}, width: {camRes2}</p>
+              <p><b>Landmark_8, Index Tip:</b>X: {digit_x} Y: {digit_y} Z: {digit_z}</p>
               <p>Number of records: {countData(LandMarkDataAngles)}</p>
-            
+              <p>Length of Index: {indexLength}</p> */}
           </div>
         </div>
       </div>

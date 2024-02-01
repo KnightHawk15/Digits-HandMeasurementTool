@@ -19,7 +19,7 @@ function App() {
         </Route>
         <Route path='/hand-tracker'>
           <HandTracker />
-          <Link className="button" to='/'>Home</Link>
+          <Link className="button" to='/'>Back</Link>
         </Route>
 
         <Route path='/'>

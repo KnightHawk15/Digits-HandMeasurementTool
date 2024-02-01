@@ -2,9 +2,13 @@
 .container-hand-tracker{
   text-align: left;
   font-family: 'Roboto', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
 }
 
 .panel-row{
+  align-items: stretch;
   display: flex;
   height: 100%;
 }
@@ -12,6 +16,7 @@
 h1 {
   padding-left: 12px;
   font-family: 'Roboto', sans-serif;
+  height: 1rem;
 }
 
 h2 {
@@ -23,55 +28,22 @@ h2 {
 p {
   font-size: 12px;
   font-family: 'Roboto', sans-serif;
-}
-
-
-
-/* Controls */
-
-.panel-controls{
-  flex: 30;
-
-}
-
-.container-controls {
-  background-color: rgb(240,240,240);
-  margin: 2%;
-  padding: 5%;
-  height: 800px;
-  
-  justify-content: flex-start;
-}
-
-.buttton-switch{
-  display: flex;
-  justify-content: center;
-  flex-direction: row;
-}
-
-.video-controls{
-  display: flex;
-  justify-content: center;
-  flex-direction: row;
-}
-
-.control-form {
-  height: 20%;
-  display: flex;
-  flex-direction: column;
+  overflow-wrap: break-word;
 }
 
 /* Display */
 
 .panel-display{
-  flex: 50;
+  flex: 60;
+  max-width: 810px;
+  min-width: 500px;
 }
 
 .container-display {
   background-color: rgb(240,240,240);
-  margin: 2%;
-  padding: 5%;
-  height: 800px;
+  margin: 0.5rem;
+  padding: 0.75rem;
+  height: 90%;
 }
 
 .webcam{
@@ -88,7 +60,27 @@ p {
 
 .output-video {
   display: block;
-  height: 300px;
+  height: 70%;
+}
+
+/* Controls */
+
+.control-form {
+  display: flex;
+  align-items: center;
+}
+
+.controls{
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.controls-cell {
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  margin-right: 1em;
 }
 
 .resolution-config {
@@ -96,42 +88,17 @@ p {
   justify-content: flex-start;
 }
 
-/* Data */
-
-.diagram {
-  height: 604px;
-  width: 362px;
-  /* border: 1px solid red; */
-  display: inline-block;
-  /* position: fixed; */
+.formItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 1em;
 }
 
-.diagrams_src{
-  height: 604px;
-  width: 362px;
-  display: none;
-}
-
-/* .left-diagram {
-  width: 50%;
-}
-
-.right-diagram {
-  width: 50%;
-} */
-
-.panel-data{
-  flex: 20;
-}
-
-.container-data {
-  background-color: rgb(240,240,240);
-  margin: 2%;
-  padding: 5%;
-  height: 800px;
-}
-
-.container-upload{
+.container-upload {
+  display: flex; 
+  margin-right: 1em;
+  justify-content: flex-start;
   align-content: center;
 }
 
@@ -140,11 +107,48 @@ p {
   justify-content: center;
 }
 
+
+/* Data */
+
+.panel-data{
+  flex: 40;
+  max-width: 637px;
+}
+
+
+.container-data {
+  background-color: rgb(240,240,240);
+  margin: 0.5rem;
+  padding: 0.75rem;
+  height: 90%;
+}
+
+.diagram-grid{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.diagram {
+  height: 351px;
+  width: 296.5px;
+  /* border: 1px solid red; */
+  display: inline-block;
+  /* position: fixed; */
+}
+
+.diagrams_src{
+  height: 351px;
+  width: 296.5px;
+  display: none;
+}
+
+
 /* Components */
+
 .button-form {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex: none;
   padding: 6px 14px;
   font-family: 'Roboto', sans-serif;
   border-radius: 6px;
@@ -156,12 +160,29 @@ p {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
-  margin-left: 8px;
-  margin-right: 8px;
+  
 }
 
+.button {
+  padding: 6px 14px;
+  font-family: 'Roboto', sans-serif;
+  border-radius: 6px;
+  border: none;
+  color: #fff;
+  background: linear-gradient(180deg, #4B91F7 0%, #367AF6 100%);
+   background-origin: border-box;
+  box-shadow: 0px 0.5px 1.5px rgba(54, 122, 246, 0.25), inset 0px 0.8px 0px -0.25px rgba(255, 255, 255, 0.2);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  text-decoration:none;
+  margin-top: 0.5rem;
+  margin-right: 40%;
+}
+
+
 .button-webcam {
-  align-items: center;
+  /* align-items: center; */
   padding: 6px 14px;
   font-family: 'Roboto', sans-serif;
   border-top-left-radius: 6px;
@@ -202,6 +223,10 @@ p {
   width:auto;
 }
 
+.margin-push{
+  margin-right: 0.5rem;
+}
+
 .button-form:hover{
   cursor: pointer;
 }
@@ -212,20 +237,22 @@ p {
 
 
 .input-box{
-  width: 5em;
+  width: 3em;
   text-align: center;
-  margin:auto;
+  margin-right: 0.5rem;
   padding:0.2em;
 }
 
 .field-label{
-  margin: auto;
+  margin-bottom: 0.4em;
   font-size: 10pt;
   font-family: 'Roboto', sans-serif;
 }
 
 .input-file {
   color: transparent;
+  width: 6.5rem;
+  margin-right: 0.5rem;
 }
 .input-file::-webkit-file-upload-button {
   visibility: hidden;
@@ -233,7 +260,7 @@ p {
 .input-file::before {
   content: 'Select File(s)';
   color: #fff;
-  display: inline-block;
+  display: flex;
   background: linear-gradient(180deg, #4B91F7 0%, #367AF6 100%);
   border: none;
   border-radius: 6px;
@@ -253,8 +280,8 @@ p {
 .container-sep {
   border: 1px solid rgb(221, 221, 221);
   border-radius: 5px;
-  margin-top: 24px;
-  margin-bottom: 24px;
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
 }
 
 /*
