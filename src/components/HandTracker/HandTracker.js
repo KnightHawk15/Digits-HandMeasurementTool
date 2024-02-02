@@ -195,7 +195,7 @@ function HandTracker(){
     );
     for(let i=0; i<tips_distance.length; i++){
       canvasCtxTips.fillText(
-        String(Math.round(distances[i])),
+        distances[i].toFixed(1),
         (tips_distance[i][0]),
         (tips_distance[i][1])
 
@@ -252,7 +252,7 @@ function HandTracker(){
           351
         );
         canvasCtxIPDist.fillText(
-          String(Math.round(distances[4])),
+          distances[4].toFixed(1),
           124,
           54
         )
