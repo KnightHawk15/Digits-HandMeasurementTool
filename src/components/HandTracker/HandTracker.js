@@ -183,7 +183,7 @@ function HandTracker(){
     img = document.getElementById("diagram_preload_tips");
     canvasCtxTips.save();
     canvasCtxTips.fillStyle = "#000";
-    canvasCtxTips.font = "9px Arial";
+    canvasCtxTips.font = "12px Arial";
     canvasCtxTips.textAlign = "center";
     canvasCtxTips.clearRect(0,0,canvasElementTips.width,canvasElementTips.height);
     canvasCtxTips.drawImage(
@@ -211,7 +211,7 @@ function HandTracker(){
       img = document.getElementById("diagram_preload_tips_angles");
       canvasCtxTipsAngles.save();
       canvasCtxTipsAngles.fillStyle = "#000";
-      canvasCtxTipsAngles.font = "9px Arial";
+      canvasCtxTipsAngles.font = "12px Arial";
       canvasCtxTipsAngles.textAlign = "center";
       canvasCtxTipsAngles.clearRect(0,0,canvasElementTipsAngles.width,canvasElementTipsAngles.height);
       canvasCtxTipsAngles.drawImage(
@@ -241,7 +241,7 @@ function HandTracker(){
         img = document.getElementById("diagram_preload_IPDist");
         canvasCtxIPDist.save();
         canvasCtxIPDist.fillStyle = "#000";
-        canvasCtxIPDist.font = "9px Arial";
+        canvasCtxIPDist.font = "12px Arial";
         canvasCtxIPDist.textAlign = "center";
         canvasCtxIPDist.clearRect(0,0,canvasElementIPDist.width,canvasElementIPDist.height);
         canvasCtxIPDist.drawImage(
@@ -253,7 +253,7 @@ function HandTracker(){
         );
         canvasCtxIPDist.fillText(
           distances[4].toFixed(1),
-          124,
+          122,
           54
         )
         
