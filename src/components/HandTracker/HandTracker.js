@@ -47,8 +47,8 @@ function HandTracker(){
   // Model Config
   const [minDetectionConfidence, setminDetectionConfidence] = useState(0.75);
   const [minTrackingConfidence, setminTrackingConfidence] = useState(0.7);
-  const [index_input, setIndexInput] = useState(9);
-  const [indexLength, setIndexLength] = useState(9);
+  const [index_input, setIndexInput] = useState(8);
+  const [indexLength, setIndexLength] = useState(8);
   
   // Video:
   const [filesSrc, setFilesSrc] = useState(null); // array for the uploaded videos
