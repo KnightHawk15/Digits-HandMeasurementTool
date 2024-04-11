@@ -47,6 +47,7 @@ function HandTracker(){
   // Model Config
   const [minDetectionConfidence, setminDetectionConfidence] = useState(0.75);
   const [minTrackingConfidence, setminTrackingConfidence] = useState(0.7);
+  const [index_input, setIndexInput] = useState(9);
   const [indexLength, setIndexLength] = useState(9);
   
   // Video:
@@ -112,9 +113,9 @@ function HandTracker(){
       //Push the points to an array reducing to 6 decimal points 
       coordinates.push([parseFloat(xVal), parseFloat(yVal), parseFloat(zVal)]);
     }
-    setDigit_x(coordinates[9][0]*camRes1);
-    setDigit_y(coordinates[9][1]*camRes2);
-    setDigit_z(coordinates[9][2]*camRes1);
+    setDigit_x(Math.round(coordinates[21][0]*camRes1));
+    setDigit_y(Math.round(coordinates[21][1]*camRes2));
+
     const vectors = convertToVector(coordinates);
     const magnitudes =  calculateMagnitude(vectors);
 
@@ -125,6 +126,8 @@ function HandTracker(){
 
     const angles = calculateAngle(vectors, magnitudes, deltaTime);
     const distances = calculateDistances(coordinates)
+
+    setDigit_z(Math.round(distances[5]));
     
     // console.log("Index coords:" + coordinates[9][0]*camRes1 + "," + coordinates[9][1]*camRes2 + "," + coordinates[9][2]*camRes1)
     // console.log("Pinky coords:" + coordinates[21][0]*camRes1 + "," + coordinates[21][1]*camRes2 + "," + coordinates[21][2]*camRes1)
@@ -460,9 +463,9 @@ function HandTracker(){
   // Helper Func: Distance between two 3D points
   const dbP = (p1,p2) => {
     return parseFloat(Math.sqrt(
-        Math.pow(camRes1*(p2[0]-p1[0]),2)+
-        Math.pow(camRes2*(p2[1]-p1[1]),2)+
-        Math.pow(camRes1*(p2[2]-p1[2]),2)
+        Math.pow((p2[0]-p1[0]),2)+
+        Math.pow((p2[1]-p1[1]),2)+
+        Math.pow((p2[2]-p1[2]),2)
       ));
     // return Math.sqrt((p2[0]-p1[0])^2+(p2[2]-p1[2])^2+(p2[1]-p1[1])^2);
   }
@@ -476,6 +479,7 @@ function HandTracker(){
     distances.push(dbP(coordinates[13],coordinates[17]));
     distances.push(dbP(coordinates[17],coordinates[21]));
     distances.push(dbP(coordinates[9],coordinates[21])); //index -> pinky
+    distances.push(dbP(coordinates[6],coordinates[9])); //index check
 
     for(let i = 0; i < distances.length; i++){
       distances[i] = distances[i]*pixelScale;
@@ -697,6 +701,14 @@ function HandTracker(){
 
   }
 
+  //Index Length
+  function onChangeIndexLength(e){
+    e.preventDefault();
+    setIndexLength(parseInt(index_input));
+    setIndexInput("");
+
+  }
+
   //DATA RESET
   function resetCollection(e){
     LandMarkDataALL.length = 0;
@@ -754,7 +766,7 @@ function HandTracker(){
                   </div>
                   <div className='formItem'>
                     <label className="field-label">Index Finger MCT - TIP</label>
-                    <input className="input-box" type="text" onChange={(e)=>setIndexLength(parseFloat(e.target.value))} placeholder="9" />
+                    <input className="input-box" type="text" value = {index_input} onChange={(e)=>onChangeIndexLength(e)} placeholder="9" />
                     {/* <button className="button-form" onClick={configHands}>Set</button> */}
                   </div>
                 </form>
@@ -780,6 +792,7 @@ function HandTracker(){
                   <button className="button-form margin-push" onClick={eventDownloadAngles}>Angles</button>
                   <button className="button-form margin-push" onClick={eventDownloadAll}>All</button>
                   <button className="button-form margin-push" onClick={resetCollection}>Reset Collection</button>
+                  {digit_x}, {digit_y}, {digit_z}
                 </form>
                 
               </div>
