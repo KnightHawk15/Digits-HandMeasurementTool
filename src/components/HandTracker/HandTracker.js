@@ -16,15 +16,14 @@ import { joints_angles, tips_distance, tips_angles } from './diagram-map';
 const startTime = Date.now();
 
 const LandMarkDataALL = [];
-const LandMarkDataCoords = [];
-const LandMarkDataAngles = [];
-const LandMarkDataDistances = [];
 
 const file_names = [];
 var mp_hands = null;
 var current_file = "";
 
 function HandTracker(){
+
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0)
 
   // Display: 
 
@@ -38,17 +37,14 @@ function HandTracker(){
   const [digit_x, setDigit_x] = useState(0);
   const [digit_y, setDigit_y] = useState(0);
   const [digit_z, setDigit_z] = useState(0);
-  const [camRes1, setCamRes1] = useState(720);
-  const [camRes2, setCamRes2] = useState(1280);
-  const [res_height, setResHeight] = useState(720);
-  const [res_width, setResWidth] = useState(1280);
+  const camRes1 = useRef(720);
+  const camRes2 = useRef(1280);
   let camera = null;  
 
   // Model Config
-  const [minDetectionConfidence, setminDetectionConfidence] = useState(0.75);
-  const [minTrackingConfidence, setminTrackingConfidence] = useState(0.7);
-  const [index_input, setIndexInput] = useState(8);
-  const [indexLength, setIndexLength] = useState(8);
+  const minDetectionConfidence = useRef(0.75);
+  const minTrackingConfidence = useRef(0.7);
+  const indexLength = useRef(9);
   
   // Video:
   const [filesSrc, setFilesSrc] = useState(null); // array for the uploaded videos
@@ -66,6 +62,39 @@ function HandTracker(){
         dataArray.push(result);
     }
     return dataArray.join(' ') + '\r\n';
+  }
+
+  //CONTROL FORM SUBMIT
+  function handleControlSubmit(e){
+    //Prevent browser refresh
+    e.preventDefault();
+ 
+
+    // Read inputs
+    const form = e.target;
+    const formData = new FormData(form);
+
+    const formJson = Object.fromEntries(formData.entries());
+    console.log(formJson);
+    console.log(formJson.IndexLength);
+
+    if (formJson.camRes1  && formJson.camRes2 != ""){
+      camRes1.current = parseInt(formJson.camRes1);
+      camRes2.current = parseInt(formJson.camRes2);
+    }
+    if(formJson.minDetectionConfidence != ""){
+      minDetectionConfidence.current = parseFloat(formJson.minDetectionConfidence);
+    } 
+    if(formJson.minTrackingConfidence != "") {
+      minTrackingConfidence.current  = parseFloat(formJson.minTrackingConfidence);
+    } 
+    if(formJson.IndexLength != "")  {
+      indexLength.current = formJson.IndexLength
+    }
+    
+    console.log(indexLength.current);
+
+
   }
 
   const downloadCSV = (arrayOfObjects=[]) =>{
@@ -113,8 +142,8 @@ function HandTracker(){
       //Push the points to an array reducing to 6 decimal points 
       coordinates.push([parseFloat(xVal), parseFloat(yVal), parseFloat(zVal)]);
     }
-    setDigit_x(Math.round(coordinates[21][0]*camRes1));
-    setDigit_y(Math.round(coordinates[21][1]*camRes2));
+    
+    setDigit_y(Math.round(coordinates[21][1]*camRes2.current));
 
     const vectors = convertToVector(coordinates);
     const magnitudes =  calculateMagnitude(vectors);
@@ -129,8 +158,8 @@ function HandTracker(){
 
     setDigit_z(Math.round(distances[5]));
     
-    // console.log("Index coords:" + coordinates[9][0]*camRes1 + "," + coordinates[9][1]*camRes2 + "," + coordinates[9][2]*camRes1)
-    // console.log("Pinky coords:" + coordinates[21][0]*camRes1 + "," + coordinates[21][1]*camRes2 + "," + coordinates[21][2]*camRes1)
+    // console.log("Index coords:" + coordinates[9][0]*camRes1.current + "," + coordinates[9][1]*camRes2.current + "," + coordinates[9][2]*camRes1.current)
+    // console.log("Pinky coords:" + coordinates[21][0]*camRes1.current + "," + coordinates[21][1]*camRes2.current + "," + coordinates[21][2]*camRes1.current)
     
     // Diagrams
 
@@ -260,21 +289,15 @@ function HandTracker(){
           54
         )
         
-      
-    // Push landmark data
-    LandMarkDataCoords.push(coordinates);
-    angles.push(current_file);
-    LandMarkDataAngles.push(angles);
-    // console.log(LandMarkDataAngles);
     LandMarkDataALL.push([coordinates,angles]);
   }
 
   const convertToVectorFullFinger = (coordinates) => {
     const vectors = [];
     for(let i = 1; i<coordinates.length; i++){
-      const vx = (coordinates[i][0] - coordinates[0][0])*camRes1;
-      const vy = (coordinates[i][1] - coordinates[0][1])*camRes2;
-      const vz = (coordinates[i][2] - coordinates[0][2])*camRes1;
+      const vx = (coordinates[i][0] - coordinates[0][0])*camRes1.current;
+      const vy = (coordinates[i][1] - coordinates[0][1])*camRes2.current;
+      const vz = (coordinates[i][2] - coordinates[0][2])*camRes1.current;
       vectors.push([parseFloat(vx),parseFloat(vy),parseFloat(vz)])
     }
     const magnitudes = [];
@@ -302,16 +325,16 @@ function HandTracker(){
 
     //Each set of vectors 
     const allVectors = [];
-    //camRes1 => x,z camRes2 => y 
+    //camRes1.current => x,z camRes2.current => y 
     //Split hand coordinates into 5 arrays (sections)
     //Section 1 - has 4 vectors 
     for(let i = 1; i<5; i++){
-      const x1 = coordinates[i][0] * camRes1;
-      const y1 = coordinates[i][1] * camRes2;
-      const z1 = coordinates[i][2] * camRes1;
-      const x2 = coordinates[i+1][0] * camRes1;
-      const y2 = coordinates[i+1][1]* camRes2;
-      const z2 = coordinates[i+1][2]* camRes1;
+      const x1 = coordinates[i][0] * camRes1.current;
+      const y1 = coordinates[i][1] * camRes2.current;
+      const z1 = coordinates[i][2] * camRes1.current;
+      const x2 = coordinates[i+1][0] * camRes1.current;
+      const y2 = coordinates[i+1][1]* camRes2.current;
+      const z2 = coordinates[i+1][2]* camRes1.current;
       let vx = (x2 - x1);
       let vy = (y2 - y1);
       let vz = (z2 - z1);
@@ -325,21 +348,21 @@ function HandTracker(){
     for(let j = 1; j<5; j++){
       //initially add 4 after first increment 
       if(j===1){
-        let vx = ((coordinates[j+5][0]* camRes1)-(coordinates[j][0]* camRes1));
-        let vy = ((coordinates[j+5][1]* camRes2)-(coordinates[j][1]* camRes2));
-        let vz = ((coordinates[j+5][2]* camRes1)-(coordinates[j][2]* camRes1));
+        let vx = ((coordinates[j+5][0]* camRes1.current)-(coordinates[j][0]* camRes1.current));
+        let vy = ((coordinates[j+5][1]* camRes2.current)-(coordinates[j][1]* camRes2.current));
+        let vz = ((coordinates[j+5][2]* camRes1.current)-(coordinates[j][2]* camRes1.current));
         vx=parseFloat(vx)
         vy=parseFloat(vy)
         vz=parseFloat(vz)
         vectors2.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
       }
       else{
-        const x1 = coordinates[j+4][0]* camRes1;
-        const y1 = coordinates[j+4][1]* camRes2;
-        const z1 = coordinates[j+4][2]* camRes1;
-        const x2 = coordinates[j+5][0]* camRes1;
-        const y2 = coordinates[j+5][1]* camRes2;
-        const z2 = coordinates[j+5][2]* camRes1;
+        const x1 = coordinates[j+4][0]* camRes1.current;
+        const y1 = coordinates[j+4][1]* camRes2.current;
+        const z1 = coordinates[j+4][2]* camRes1.current;
+        const x2 = coordinates[j+5][0]* camRes1.current;
+        const y2 = coordinates[j+5][1]* camRes2.current;
+        const z2 = coordinates[j+5][2]* camRes1.current;
         let vx = (x2 - x1);
         let vy = (y2 - y1);
         let vz = (z2 - z1);
@@ -354,21 +377,21 @@ function HandTracker(){
     for(let k = 1; k<5; k++){
       //initially add 4 after first increment 
       if(k===1){
-        let vx = ((coordinates[k+9][0]* camRes1)-(coordinates[k][0]* camRes1));
-        let vy = ((coordinates[k+9][1]* camRes2)-(coordinates[k][1]* camRes2));
-        let vz = ((coordinates[k+9][2]* camRes1)-(coordinates[k][2]* camRes1));
+        let vx = ((coordinates[k+9][0]* camRes1.current)-(coordinates[k][0]* camRes1.current));
+        let vy = ((coordinates[k+9][1]* camRes2.current)-(coordinates[k][1]* camRes2.current));
+        let vz = ((coordinates[k+9][2]* camRes1.current)-(coordinates[k][2]* camRes1.current));
         vx=parseFloat(vx)
         vy=parseFloat(vy)
         vz=parseFloat(vz)
         vectors3.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
       }
       else{
-        const x1 = coordinates[k+8][0]* camRes1;
-        const y1 = coordinates[k+8][1]* camRes2;
-        const z1 = coordinates[k+8][2]* camRes1;
-        const x2 = coordinates[k+9][0]* camRes1;
-        const y2 = coordinates[k+9][1]* camRes2;
-        const z2 = coordinates[k+9][2]* camRes1;
+        const x1 = coordinates[k+8][0]* camRes1.current;
+        const y1 = coordinates[k+8][1]* camRes2.current;
+        const z1 = coordinates[k+8][2]* camRes1.current;
+        const x2 = coordinates[k+9][0]* camRes1.current;
+        const y2 = coordinates[k+9][1]* camRes2.current;
+        const z2 = coordinates[k+9][2]* camRes1.current;
         //1. 10, 1  2. 11, 10 3. 12, 11 4. 13, 12
         let vx = (x2 - x1);
         let vy = (y2 - y1);
@@ -384,21 +407,21 @@ function HandTracker(){
     for(let u = 1; u<5; u++){
       //initially add 4 after first increment 
       if(u===1){
-        let vx = ((coordinates[u+13][0]* camRes1)-(coordinates[u][0]* camRes1));
-        let vy = ((coordinates[u+13][1]* camRes2)-(coordinates[u][1]* camRes2));
-        let vz = ((coordinates[u+13][2]* camRes1)-(coordinates[u][2]* camRes1));
+        let vx = ((coordinates[u+13][0]* camRes1.current)-(coordinates[u][0]* camRes1.current));
+        let vy = ((coordinates[u+13][1]* camRes2.current)-(coordinates[u][1]* camRes2.current));
+        let vz = ((coordinates[u+13][2]* camRes1.current)-(coordinates[u][2]* camRes1.current));
         vx=parseFloat(vx)
         vy=parseFloat(vy)
         vz=parseFloat(vz)
         vectors4.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
       }
       else{
-        const x1 = coordinates[u+12][0]* camRes1;
-        const y1 = coordinates[u+12][1]* camRes2;
-        const z1 = coordinates[u+12][2]* camRes1;
-        const x2 = coordinates[u+13][0]* camRes1;
-        const y2 = coordinates[u+13][1]* camRes2;
-        const z2 = coordinates[u+13][2]* camRes1;
+        const x1 = coordinates[u+12][0]* camRes1.current;
+        const y1 = coordinates[u+12][1]* camRes2.current;
+        const z1 = coordinates[u+12][2]* camRes1.current;
+        const x2 = coordinates[u+13][0]* camRes1.current;
+        const y2 = coordinates[u+13][1]* camRes2.current;
+        const z2 = coordinates[u+13][2]* camRes1.current;
         //1.  14, 1   2. 15, 14   3. 16, 15   4. 17, 16
         let vx = (x2 - x1);
         let vy = (y2 - y1);
@@ -412,19 +435,19 @@ function HandTracker(){
     for(let v = 1; v<5; v++){
       //initially add 4 after first increment 
       if(v===1){
-        let vx = ((coordinates[v+17][0]* camRes1)-(coordinates[v][0]* camRes1));
-        let vy = ((coordinates[v+17][1]* camRes2)-(coordinates[v][1]* camRes2));
-        let vz = ((coordinates[v+17][2]* camRes1)-(coordinates[v][2]* camRes1));
+        let vx = ((coordinates[v+17][0]* camRes1.current)-(coordinates[v][0]* camRes1.current));
+        let vy = ((coordinates[v+17][1]* camRes2.current)-(coordinates[v][1]* camRes2.current));
+        let vz = ((coordinates[v+17][2]* camRes1.current)-(coordinates[v][2]* camRes1.current));
         
         vectors5.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
       }
       else{
-        const x1 = coordinates[v+16][0]* camRes1;
-        const y1 = coordinates[v+16][1]* camRes2;
-        const z1 = coordinates[v+16][2]* camRes1;
-        const x2 = coordinates[v+17][0]* camRes1;
-        const y2 = coordinates[v+17][1]* camRes2;
-        const z2 = coordinates[v+17][2]* camRes1;
+        const x1 = coordinates[v+16][0]* camRes1.current;
+        const y1 = coordinates[v+16][1]* camRes2.current;
+        const z1 = coordinates[v+16][2]* camRes1.current;
+        const x2 = coordinates[v+17][0]* camRes1.current;
+        const y2 = coordinates[v+17][1]* camRes2.current;
+        const z2 = coordinates[v+17][2]* camRes1.current;
         //1. 18, 1   2. 19, 18  3. 20, 19 4. 21, 20
         let vx = (x2 - x1);
         let vy = (y2 - y1);
@@ -471,8 +494,9 @@ function HandTracker(){
   }
 
   const calculateDistances = (coordinates) => {
+    forceUpdate()
     const distances = []; 
-    const pixelScale = indexLength/dbP(coordinates[6],coordinates[9]);
+    const pixelScale = indexLength.current/dbP(coordinates[6],coordinates[9]); // Could be an issue when measuring the full finger as when it's bent the distance will shorten.
 
     distances.push(dbP(coordinates[5],coordinates[9]));
     distances.push(dbP(coordinates[9],coordinates[13]));
@@ -589,8 +613,8 @@ function HandTracker(){
 
     // Load MP Hands
     camera = null;
-    const mdc = minDetectionConfidence;
-    const mtc = minTrackingConfidence;
+    const mdc = minDetectionConfidence.current;
+    const mtc = minTrackingConfidence.current;
 
     //const mp_hands = new Hands({
     mp_hands = new Hands({
@@ -611,6 +635,7 @@ function HandTracker(){
     console.log(input_mode);
     console.log(videoRef.current instanceof HTMLVideoElement);
 
+    // Webcam Mode
     if(input_mode && webCamRef.current.video !== null && typeof webCamRef.current !== 'undefined' && webCamRef.current !== null){
         camera = new cam.Camera(webCamRef.current.video,{
         onFrame: async()=>{
@@ -621,11 +646,13 @@ function HandTracker(){
         console.log("input mode: Webcam")
 
     }
-    else if(videoRef.current !== null){
+    // Upload Mode
+    else if(videoRef.current !== undefined && !(videoRef.current instanceof HTMLVideoElement)){
         async function detectionFrame(){
           await mp_hands.send({image: videoRef.current});
           videoRef.current.requestVideoFrameCallback(detectionFrame);
         }
+        console.log(typeof videoRef.current)
         videoRef.current.requestVideoFrameCallback(detectionFrame);
         console.log("input mode: Upload")
       }
@@ -634,7 +661,7 @@ function HandTracker(){
     console.log("mdc",mdc);
     console.log("mtc",mtc);
 
-  }, [input_mode,minDetectionConfidence,minTrackingConfidence]);
+  }, [input_mode]);
 
     // EVENT HANDLERS
 
@@ -666,12 +693,7 @@ function HandTracker(){
   }
 
   // DOWNLOADS
-  function eventDownloadCoords(){
-    downloadCSV(LandMarkDataCoords);
-  };
-  function eventDownloadAngles(){
-    downloadCSV(LandMarkDataAngles);
-  };
+
   function eventDownloadAll(){
     downloadCSV(LandMarkDataALL);
   };
@@ -679,43 +701,18 @@ function HandTracker(){
 
 
   // CONFIG
-
-  //RES
-  function onChangeResHeight(e){
-    setResHeight(e.target.value);
-  }
-  function onChangeResWidth(e){
-    setResWidth(e.target.value);
-  }
-  function setResolution(e){
-    e.preventDefault();
-    setCamRes1(parseInt(res_height));
-    setResHeight("");
-    setCamRes2(parseInt(res_width));
-    setResWidth("");
-    console.log(res_height, res_width);
-  }
   //INPUT MODE
   function onChangeInputMode(){
     setinputMode(!input_mode);
 
   }
 
-  //Index Length
-  function onChangeIndexLength(e){
-    e.preventDefault();
-    setIndexLength(parseInt(index_input));
-    setIndexInput("");
-
-  }
-
   //DATA RESET
   function resetCollection(e){
     LandMarkDataALL.length = 0;
-    LandMarkDataCoords.length = 0;
-    LandMarkDataAngles.length = 0;
   }
 
+  
   
   return(
     <div className="container-hand-tracker">
@@ -723,7 +720,7 @@ function HandTracker(){
 
     
         <div className="panel-display">
-          <h1>DISPLAY/CONTROLS</h1>
+          <h1>Display & Controls</h1>
           <div className="container-display">
             {/* Inputs */}
             <Webcam ref={webCamRef} className="webcam"/>
@@ -740,37 +737,38 @@ function HandTracker(){
             )}
             {/* Outputs */}
             <canvas ref={canvasRef} className="output-canvas"/>
-            <p>Number of records: {countData(LandMarkDataAngles)}</p>
+            <p>Number of records: {countData(LandMarkDataALL)}</p>
             
             <hr className="container-sep"/>
 
             <div className="controls">
+              <form method="post" onSubmit={handleControlSubmit} className="control-form">
               <div className="controls-cell">
                 <h2>Camera Resolution</h2>
-                <form className="control-form">
-                  <input className="input-box" type="text" value={res_height} onChange={(e)=>onChangeResHeight(e)} placeholder="720p" />
-                  <input className="input-box" type="text" value={res_width} onChange={(e)=>onChangeResWidth(e)} placeholder="1280p" />
-                  <button className="button-form" onClick={setResolution}>Set</button>
-                </form>
+                <div className="control-form">
+                  <input name="camRes1.current" className="input-box" type="number" placeholder={camRes1.current} />
+                  <input name="camRes2.current" className="input-box" type="number" placeholder={camRes2.current}/>
+                </div>
               </div>
               <div className='controls-cell'>
                 <h2>Model Config</h2>
-                <form className="control-form">
+                <div className="control-form">
                   <div className='formItem'>
                     <label className="field-label">Min. Detection Conf.</label>
-                    <input className="input-box" type="text" onChange={(e)=>setminDetectionConfidence(parseFloat(e.target.value))} placeholder="0.7" />
+                    <input name="minDetectionConfidence" className="input-box" type="number" step="0.01" placeholder={minDetectionConfidence.current}/>
                   </div>
                   <div className='formItem'>
                     <label className="field-label">Min. Tracking Conf.</label>
-                    <input className="input-box" type="text" onChange={(e)=>setminTrackingConfidence(parseFloat(e.target.value))} placeholder="0.75" />
+                    <input name="minTrackingConfidence" className="input-box" type="number" step="0.01" placeholder={minTrackingConfidence.current}/>
                   </div>
                   <div className='formItem'>
                     <label className="field-label">Index Finger MCT - TIP</label>
-                    <input className="input-box" type="text" value = {index_input} onChange={(e)=>onChangeIndexLength(e)} placeholder="9" />
-                    {/* <button className="button-form" onClick={configHands}>Set</button> */}
+                    <input name="IndexLength" className="input-box" type="number" step="0.01" placeholder={indexLength.current} />
+                  </div>
+                  <button type='submit' className="button-form margin-push">Submit Config</button>
+                  </div>
                   </div>
                 </form>
-              </div>
               <div className='controls-cell'>
                 <h2>Capture Mode</h2>
                 <div className='button-switch'>
@@ -788,8 +786,6 @@ function HandTracker(){
               <div className='controls-cell'>
                 <h2>Download</h2>
                 <form className="container-download">
-                  <button className="button-form margin-push" onClick={eventDownloadCoords}>Coords</button>
-                  <button className="button-form margin-push" onClick={eventDownloadAngles}>Angles</button>
                   <button className="button-form margin-push" onClick={eventDownloadAll}>All</button>
                   <button className="button-form margin-push" onClick={resetCollection}>Reset Collection</button>
                   {digit_x}, {digit_y}, {digit_z}
@@ -803,7 +799,7 @@ function HandTracker(){
         </div>
 
         <div className="panel-data">
-          <h1>DIAGRAMS</h1>
+          <h1>Diagrams & Measurements</h1>
           <div className="container-data">
               <div className='diagram-grid'>
                 <div className='grid-cell'>
@@ -827,13 +823,7 @@ function HandTracker(){
                   <img id="diagram_preload_IPDist" src={diagram_pinky_index_distance} alt="hand diagram" className="diagrams_src"/>
                 </div>
               </div>
-              
-              {/* <hr className="container-sep"/>
-              <h2>Read Outs</h2>
-              <p><b>Resolution: </b>height: {camRes1}, width: {camRes2}</p>
-              <p><b>Landmark_8, Index Tip:</b>X: {digit_x} Y: {digit_y} Z: {digit_z}</p>
-              <p>Number of records: {countData(LandMarkDataAngles)}</p>
-              <p>Length of Index: {indexLength}</p> */}
+            
           </div>
         </div>
       </div>
