@@ -284,6 +284,13 @@ p {
   margin-bottom: 0.2rem;
 }
 
+.dropdown {
+  width: 4em;
+  text-align: center;
+  margin-right: 0.5rem;
+  padding:0.2em;
+}
+
 /*
 For webcam component 
       style={{

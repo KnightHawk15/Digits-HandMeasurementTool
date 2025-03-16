@@ -15,15 +15,14 @@ import { joints_angles, tips_distance, tips_angles } from './diagram-map';
 
 const startTime = Date.now();
 
-const LandMarkDataALL = [];
+const DataIn = [];
+const DataOut = [];
 
 const file_names = [];
 var mp_hands = null;
 var current_file = "";
 
 function HandTracker(){
-
-  const [, forceUpdate] = React.useReducer(x => x + 1, 0)
 
   // Display: 
 
@@ -45,6 +44,10 @@ function HandTracker(){
   const minDetectionConfidence = useRef(0.75);
   const minTrackingConfidence = useRef(0.7);
   const indexLength = useRef(9);
+  const dimension = useRef(3);
+
+  // Data
+  const DataIn = useRef([]);
   
   // Video:
   const [filesSrc, setFilesSrc] = useState(null); // array for the uploaded videos
@@ -61,6 +64,7 @@ function HandTracker(){
         result = ' ' + result + ', ';
         dataArray.push(result);
     }
+    console.log(dataArray[0]);
     return dataArray.join(' ') + '\r\n';
   }
 
@@ -76,29 +80,29 @@ function HandTracker(){
 
     const formJson = Object.fromEntries(formData.entries());
     console.log(formJson);
-    console.log(formJson.IndexLength);
 
     if (formJson.camRes1  && formJson.camRes2 != ""){
-      camRes1.current = parseInt(formJson.camRes1);
-      camRes2.current = parseInt(formJson.camRes2);
+      camRes1.current = formJson.camRes1;
+      camRes2.current = formJson.camRes2;
     }
-    if(formJson.minDetectionConfidence != ""){
-      minDetectionConfidence.current = parseFloat(formJson.minDetectionConfidence);
+    if(formJson.minDetectionConfidence !== ""){
+      minDetectionConfidence.current = formJson.minDetectionConfidence;
     } 
-    if(formJson.minTrackingConfidence != "") {
-      minTrackingConfidence.current  = parseFloat(formJson.minTrackingConfidence);
+    if(formJson.minTrackingConfidence !== "") {
+      minTrackingConfidence.current  = formJson.minTrackingConfidence;
     } 
-    if(formJson.IndexLength != "")  {
-      indexLength.current = formJson.IndexLength
+    if(formJson.IndexLength !== "")  {
+      indexLength.current = formJson.IndexLength;
     }
-    
-    console.log(indexLength.current);
+    if(formJson.dimension !== "") {
+      dimension.current = formJson.dimension;
+    }
 
 
   }
 
   const downloadCSV = (arrayOfObjects=[]) =>{
-  // console.log(arrayOfObjects);
+
   let measurements = arrayOfObjects;
     if (!measurements.length) {
       return alert('No data available for download.');
@@ -154,7 +158,13 @@ function HandTracker(){
     const anglesFF = calculateAngleFullFinger(vectorsFF,magnitudeFF,deltaTime);
 
     const angles = calculateAngle(vectors, magnitudes, deltaTime);
-    const distances = calculateDistances(coordinates)
+    
+    var distances = [];
+    if(dimension.current == 3){
+      distances = calculateDistances(coordinates);
+    } else {
+      distances = calculateDistances2d(coordinates);
+    }
 
     setDigit_z(Math.round(distances[5]));
     
@@ -289,7 +299,7 @@ function HandTracker(){
           54
         )
         
-    LandMarkDataALL.push([coordinates,angles]);
+    DataIn.current.push([coordinates.slice(1),angles.slice(1),distances.slice(0,4),distances[4],anglesFF.slice(1)]);
   }
 
   const convertToVectorFullFinger = (coordinates) => {
@@ -492,9 +502,19 @@ function HandTracker(){
       ));
     // return Math.sqrt((p2[0]-p1[0])^2+(p2[2]-p1[2])^2+(p2[1]-p1[1])^2);
   }
+  // Helper Func: Distance between two 3D points
+  const dbP_2d = (p1,p2) => {
+    return parseFloat(Math.sqrt(
+        Math.pow((p2[0]-p1[0]),2)+
+        Math.pow((p2[1]-p1[1]),2)+
+        0
+      ));
+    // return Math.sqrt((p2[0]-p1[0])^2+(p2[2]-p1[2])^2+(p2[1]-p1[1])^2);
+  }
 
   const calculateDistances = (coordinates) => {
-    forceUpdate()
+    console.log(indexLength.current);
+
     const distances = []; 
     const pixelScale = indexLength.current/dbP(coordinates[6],coordinates[9]); // Could be an issue when measuring the full finger as when it's bent the distance will shorten.
 
@@ -512,12 +532,24 @@ function HandTracker(){
     return distances;
   }
 
-  const normalize = (vector) => {
-    const magnitude = Math.sqrt(vector[0]^2 + vector[1]^2 + vector[2]^2);
-    return [vector[0]/magnitude,vector[1]/magnitude,vector[2]/magnitude];
-  }
-  
+  const calculateDistances2d = (coordinates) => {
+    
+    const distances = []; 
+    const pixelScale = indexLength.current/dbP(coordinates[6],coordinates[9]); // Could be an issue when measuring the full finger as when it's bent the distance will shorten.
 
+    distances.push(dbP_2d(coordinates[5],coordinates[9]));
+    distances.push(dbP_2d(coordinates[9],coordinates[13]));
+    distances.push(dbP_2d(coordinates[13],coordinates[17]));
+    distances.push(dbP_2d(coordinates[17],coordinates[21]));
+    distances.push(dbP_2d(coordinates[9],coordinates[21])); //index -> pinky
+    distances.push(dbP_2d(coordinates[6],coordinates[9])); //index check
+
+    for(let i = 0; i < distances.length; i++){
+      distances[i] = distances[i]*pixelScale;
+    }
+
+    return distances;
+  }
   const calculateAngle = (vectors, magnitudes, time) => {
     const angles = [time];
     
@@ -692,14 +724,6 @@ function HandTracker(){
     // console.log("file name: ",current_file,"file index: ", file_index);
   }
 
-  // DOWNLOADS
-
-  function eventDownloadAll(){
-    downloadCSV(LandMarkDataALL);
-  };
-
-
-
   // CONFIG
   //INPUT MODE
   function onChangeInputMode(){
@@ -707,9 +731,17 @@ function HandTracker(){
 
   }
 
-  //DATA RESET
+  //DATA
+  function eventDownloadAll(){
+    downloadCSV(DataIn);
+  };
+
   function resetCollection(e){
-    LandMarkDataALL.length = 0;
+    DataIn.current.length = 0;
+  }
+
+  function capture(e){
+    console.log(DataIn.current[DataIn.current.length-1]);
   }
 
   
@@ -737,38 +769,52 @@ function HandTracker(){
             )}
             {/* Outputs */}
             <canvas ref={canvasRef} className="output-canvas"/>
-            <p>Number of records: {countData(LandMarkDataALL)}</p>
+            <p>Number of records: {countData(DataIn.current)}</p>
             
             <hr className="container-sep"/>
 
             <div className="controls">
-              <form method="post" onSubmit={handleControlSubmit} className="control-form">
-              <div className="controls-cell">
-                <h2>Camera Resolution</h2>
-                <div className="control-form">
-                  <input name="camRes1.current" className="input-box" type="number" placeholder={camRes1.current} />
-                  <input name="camRes2.current" className="input-box" type="number" placeholder={camRes2.current}/>
+            <form method="post" onSubmit={handleControlSubmit} className="control-form">
+                <div className="controls-cell">
+                  <h2>Camera Resolution</h2>
+                  <div className="control-form">
+                    <div className='formItem'>
+                      <label className="field-label">Width</label>
+                      <input name="camRes1.current" className="input-box" type="number" placeholder={camRes1.current} />
+                    </div>
+                    <div className='formItem'>
+                      <label className="field-label">Height</label>
+                      <input name="camRes2.current" className="input-box" type="number" placeholder={camRes2.current}/>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className='controls-cell'>
-                <h2>Model Config</h2>
-                <div className="control-form">
-                  <div className='formItem'>
-                    <label className="field-label">Min. Detection Conf.</label>
-                    <input name="minDetectionConfidence" className="input-box" type="number" step="0.01" placeholder={minDetectionConfidence.current}/>
+                <div className='controls-cell'>
+                  <h2>Model Config</h2>
+                  <div className="control-form">
+                    <div className='formItem'>
+                      <label className="field-label">Min. Detection Conf.</label>
+                      <input name="minDetectionConfidence" className="input-box" type="number" step="0.01" placeholder={minDetectionConfidence.current}/>
+                    </div>
+                    <div className='formItem'>
+                      <label className="field-label">Min. Tracking Conf.</label>
+                      <input name="minTrackingConfidence" className="input-box" type="number" step="0.01" placeholder={minTrackingConfidence.current}/>
+                    </div>
+                    <div className='formItem'>
+                      <label className="field-label">Index Finger MCT - TIP</label>
+                      <input name="IndexLength" className="input-box" type="number" step="0.01" placeholder={indexLength.current} />
+                    </div>
+                    <div className='formItem'>
+                      <label className="field-label">Dist. Calc. Dimension</label>
+                      <select name="dimension" className='dropdown'>
+                        <option value="2">2D</option>
+                        <option value="3">3D</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className='formItem'>
-                    <label className="field-label">Min. Tracking Conf.</label>
-                    <input name="minTrackingConfidence" className="input-box" type="number" step="0.01" placeholder={minTrackingConfidence.current}/>
-                  </div>
-                  <div className='formItem'>
-                    <label className="field-label">Index Finger MCT - TIP</label>
-                    <input name="IndexLength" className="input-box" type="number" step="0.01" placeholder={indexLength.current} />
-                  </div>
-                  <button type='submit' className="button-form margin-push">Submit Config</button>
-                  </div>
-                  </div>
-                </form>
+                </div>
+                <button type='submit' className="button-form margin-push">Submit Config</button>
+              
+            </form>
               <div className='controls-cell'>
                 <h2>Capture Mode</h2>
                 <div className='button-switch'>
@@ -780,17 +826,19 @@ function HandTracker(){
                 <h2>Upload</h2>
                 <form className="container-upload">
                   <input className="input-file" type='file' multiple onChange={(e)=>onChangeUpload(e)}/>
-                  <p>Current file: {current_file}</p>
                 </form>
               </div>
               <div className='controls-cell'>
                 <h2>Download</h2>
                 <form className="container-download">
-                  <button className="button-form margin-push" onClick={eventDownloadAll}>All</button>
-                  <button className="button-form margin-push" onClick={resetCollection}>Reset Collection</button>
-                  {digit_x}, {digit_y}, {digit_z}
+                  <button className="button-form margin-push" onClick={eventDownloadAll}>CSV</button>
+                  <button className="button-form margin-push" onClick={resetCollection}>Reset</button>
                 </form>
                 
+              </div>
+              <div className='controls-cell'>
+                <h2>Capture</h2>
+                  <button className="button-form margin-push" onClick={capture}>Capture</button>
               </div>
           
           </div>
