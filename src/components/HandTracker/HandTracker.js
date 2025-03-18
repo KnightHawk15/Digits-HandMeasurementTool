@@ -15,9 +15,6 @@ import { joints_angles, tips_distance, tips_angles } from './diagram-map';
 
 const startTime = Date.now();
 
-const DataIn = [];
-const DataOut = [];
-
 const file_names = [];
 var mp_hands = null;
 var current_file = "";
@@ -33,9 +30,6 @@ function HandTracker(){
   const canvasRefTipsAngles = useRef(null);
   const canvasRefIPDist = useRef(null);
   const [diagram, setDiagram] = useState(diagram_right);
-  const [digit_x, setDigit_x] = useState(0);
-  const [digit_y, setDigit_y] = useState(0);
-  const [digit_z, setDigit_z] = useState(0);
   const camRes1 = useRef(720);
   const camRes2 = useRef(1280);
   let camera = null;  
@@ -48,6 +42,7 @@ function HandTracker(){
 
   // Data
   const DataIn = useRef([]);
+  const DataOut = useRef([]);
   
   // Video:
   const [filesSrc, setFilesSrc] = useState(null); // array for the uploaded videos
@@ -64,7 +59,6 @@ function HandTracker(){
         result = ' ' + result + ', ';
         dataArray.push(result);
     }
-    console.log(dataArray[0]);
     return dataArray.join(' ') + '\r\n';
   }
 
@@ -81,7 +75,7 @@ function HandTracker(){
     const formJson = Object.fromEntries(formData.entries());
     console.log(formJson);
 
-    if (formJson.camRes1  && formJson.camRes2 != ""){
+    if (formJson.camRes1  && formJson.camRes2 !== ""){
       camRes1.current = formJson.camRes1;
       camRes2.current = formJson.camRes2;
     }
@@ -147,7 +141,6 @@ function HandTracker(){
       coordinates.push([parseFloat(xVal), parseFloat(yVal), parseFloat(zVal)]);
     }
     
-    setDigit_y(Math.round(coordinates[21][1]*camRes2.current));
 
     const vectors = convertToVector(coordinates);
     const magnitudes =  calculateMagnitude(vectors);
@@ -160,13 +153,11 @@ function HandTracker(){
     const angles = calculateAngle(vectors, magnitudes, deltaTime);
     
     var distances = [];
-    if(dimension.current == 3){
+    if(dimension.current === 3){
       distances = calculateDistances(coordinates);
     } else {
       distances = calculateDistances2d(coordinates);
     }
-
-    setDigit_z(Math.round(distances[5]));
     
     // console.log("Index coords:" + coordinates[9][0]*camRes1.current + "," + coordinates[9][1]*camRes2.current + "," + coordinates[9][2]*camRes1.current)
     // console.log("Pinky coords:" + coordinates[21][0]*camRes1.current + "," + coordinates[21][1]*camRes2.current + "," + coordinates[21][2]*camRes1.current)
@@ -468,10 +459,7 @@ function HandTracker(){
     }
 
     allVectors.push(vectors1, vectors2, vectors3, vectors4, vectors5)
-    // console.log(normalize(vectors2[0]));
-    // console.log(normalize(vectors2[1]));
-    // console.log(normalize(vectors2[2]));
-    // console.log(normalize(vectors2[3]));
+
     return allVectors;
   }
 
@@ -513,7 +501,6 @@ function HandTracker(){
   }
 
   const calculateDistances = (coordinates) => {
-    console.log(indexLength.current);
 
     const distances = []; 
     const pixelScale = indexLength.current/dbP(coordinates[6],coordinates[9]); // Could be an issue when measuring the full finger as when it's bent the distance will shorten.
@@ -559,7 +546,6 @@ function HandTracker(){
     angles.push(angle(vectors[set][1], vectors[set][2], magnitudes[set][1], magnitudes[set][2]));
     angles.push(angle(vectors[set][2], vectors[set][3], magnitudes[set][2], magnitudes[set][3]));
   }
-  // console.log(angles);
   return angles;
   }
 
@@ -721,7 +707,7 @@ function HandTracker(){
     if(file_index < file_names.length){
       current_file = file_names[file_index+1];
     }
-    // console.log("file name: ",current_file,"file index: ", file_index);
+
   }
 
   // CONFIG
@@ -732,20 +718,27 @@ function HandTracker(){
   }
 
   //DATA
-  function eventDownloadAll(){
-    downloadCSV(DataIn);
+  function eventDownloadAll(e){
+    e.preventDefault();
+    downloadCSV(DataIn.current);
   };
+  function eventDownloadCapture(e){
+    e.preventDefault();
+    downloadCSV(DataOut.current);
+  }
 
   function resetCollection(e){
+    e.preventDefault();
     DataIn.current.length = 0;
+    DataOut.current.length = 0;
   }
 
   function capture(e){
+    e.preventDefault();
+    DataOut.current.push(DataIn.current[DataIn.current.length-1]);
     console.log(DataIn.current[DataIn.current.length-1]);
   }
 
-  
-  
   return(
     <div className="container-hand-tracker">
       <div className="panel-row">
@@ -831,14 +824,12 @@ function HandTracker(){
               <div className='controls-cell'>
                 <h2>Download</h2>
                 <form className="container-download">
-                  <button className="button-form margin-push" onClick={eventDownloadAll}>CSV</button>
+                  <button className="button-form margin-push" onClick={capture}>Measure</button>
+                  <button className="button-form margin-push" onClick={eventDownloadAll}>CSV All</button>
+                  <button className="button-form margin-push" onClick={eventDownloadCapture}>CSV Measure</button>
                   <button className="button-form margin-push" onClick={resetCollection}>Reset</button>
                 </form>
                 
-              </div>
-              <div className='controls-cell'>
-                <h2>Capture</h2>
-                  <button className="button-form margin-push" onClick={capture}>Capture</button>
               </div>
           
           </div>
