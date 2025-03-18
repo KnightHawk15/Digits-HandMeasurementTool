@@ -4,28 +4,18 @@ import ErrorPage from './components/ErrorPage/ErrorPage';
 import React from 'react';
 import {
   BrowserRouter as Router,
-  Switch,
-  Route,
-  Link
+  Routes,
+  Route
 } from 'react-router-dom';
 
 function App() {
   return (
     <Router>
-      <Switch>
-        <Route exact path='/'>
-          <Home />
-          <Link className="button" to='/hand-tracker'>HandTracker - App</Link>
+      <Routes>
+        <Route exact path='/' element={<Home />}>
+          <Route path='/hand-tracker' element={<HandTracker />} />
         </Route>
-        <Route path='/hand-tracker'>
-          <HandTracker />
-          <Link className="button" to='/'>Back</Link>
-        </Route>
-
-        <Route path='/'>
-          <ErrorPage />
-        </Route>
-      </Switch>
+      </Routes>
     </Router>
   );
 }

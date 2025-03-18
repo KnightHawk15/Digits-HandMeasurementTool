@@ -14,7 +14,6 @@
     "react": "^19.0.0",
     "react-csv": "^2.2.2",
     "react-dom": "^19.0.0",
-    "react-image-mapper": "^0.0.15",
     "react-player": "^2.16.0",
     "react-router-dom": "^7.3.0",
     "react-scripts": "^5.0.1",

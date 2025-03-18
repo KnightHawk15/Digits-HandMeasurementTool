@@ -110,7 +110,7 @@ function HandTracker(){
     }
   }
 
-  let csvContent = "data:text/csv;charset=utf-8,";
+  let csvContent = "data:text/csv;charset=utf-8,lm_wrist_x,lm_wrist_y,lm_wrist_z,lm_thumb_cmc_x,lm_thumb_cmc_y,lm_thumb_cmc_z,lm_thumb_mcp_x,lm_thumb_mcp_y,lm_thumb_mcp_z,lm_thumb_ip_x,lm_thumb_ip_y,lm_thumb_ip_z,lm_thumb_tip_x,lm_thumb_tip_y,lm_thumb_tip_z,lm_index_mcp_x,lm_index_mcp_y,lm_index_mcp_z,lm_index_pip_x,lm_index_pip_y,lm_index_pip_z,lm_index_dip_x,lm_index_dip_y,lm_index_dip_z,lm_index_tip_x,lm_index_tip_y,lm_index_tip_z,lm_middle_mcp_x,lm_middle_mcp_y,lm_middle_mcp_z,lm_middle_pip_x,lm_middle_pip_y,lm_middle_pip_z,lm_middle_dip_x,lm_middle_dip_y,lm_middle_dip_z,lm_middle_tip_x,lm_middle_tip_y,lm_middle_tip_z,lm_ring_mcp_x,lm_ring_mcp_y,lm_ring_mcp_z,lm_ring_pip_x,lm_ring_pip_y,lm_ring_pip_z,lm_ring_dip_x,lm_ring_dip_y,lm_ring_dip_z,lm_ring_tip_x,lm_ring_tip_y,lm_ring_tip_z,lm_pinky_mcp_x,lm_pinky_mcp_y,lm_pinky_mcp_z,lm_pinky_pip_x,lm_pinky_pip_y,lm_pinky_pip_z,lm_pinky_dip_x,lm_pinky_dip_y,lm_pinky_dip_z,lm_pinky_tip_x,lm_pinky_tip_y,lm_pinky_tip_z,an_index_dip,an_index_mcp,an_index_pip,an_middle_dip,an_middle_mcp,an_middle_pip,an_pinky_dip,an_pinky_mcp,an_pinky_pip,an_ring_dip,an_ring_mcp,an_ring_pip,an_thumb_cmc,an_thumb_ip,an_thumb_mcp,di_thumb_index,di_index_middle,di_middle_ring,di_ring_pinky,di_index_pinky,an_thumb_index,an_index_middle,an_middle_ring,an_ring_pinky,\r\n";
   measurements.forEach((item)=>{
       csvContent += objectToCSVRow(item);
   }); 
@@ -124,6 +124,9 @@ function HandTracker(){
   }
 
   const collectData = (objArr) =>{
+    if(objArr.multiHandLandmarks.length === 0){
+      return;
+    }
     const coordinates=[];
     //Determines the time stamp of each dataset 
     const endTime = Date.now();
@@ -623,6 +626,7 @@ function HandTracker(){
       }
 
       collectData(results);
+      // console.log(results)
     }
     canvasCtx.restore();
   }
@@ -637,49 +641,57 @@ function HandTracker(){
     //const mp_hands = new Hands({
     mp_hands = new Hands({
       locateFile:(file)=>{
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.3.1626903359/${file}`;
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
       },
     });
     // Configure
     mp_hands.setOptions({
       maxNumHands: 1,
+      modelComplexity: 1,
       minDetectionConfidence: mdc,
       minTrackingConfidence: mtc
     });
     // Collect/Display
     mp_hands.onResults(onResults);
-    
-    // Manage inputs    
-    console.log(input_mode);
-    console.log(videoRef.current instanceof HTMLVideoElement);
 
-    // Webcam Mode
-    if(input_mode && webCamRef.current.video !== null && typeof webCamRef.current !== 'undefined' && webCamRef.current !== null){
-        camera = new cam.Camera(webCamRef.current.video,{
-        onFrame: async()=>{
-          await mp_hands.send({image:webCamRef.current.video})
-        }
-        });
-        camera.start();
-        console.log("input mode: Webcam")
-
-    }
-    // Upload Mode
-    else if(videoRef.current !== undefined && !(videoRef.current instanceof HTMLVideoElement)){
-        async function detectionFrame(){
-          await mp_hands.send({image: videoRef.current});
-          videoRef.current.requestVideoFrameCallback(detectionFrame);
-        }
-        console.log(typeof videoRef.current)
-        videoRef.current.requestVideoFrameCallback(detectionFrame);
-        console.log("input mode: Upload")
+    camera = new cam.Camera(webCamRef.current.video, {
+      onFrame: async () => {
+        await mp_hands.send({image: webCamRef.current.video});
       }
+    });
+    camera.start();
     
-    console.log("New Model Loaded:");
-    console.log("mdc",mdc);
-    console.log("mtc",mtc);
+    // // Manage inputs    
+    // console.log(input_mode);
+    // console.log(videoRef.current instanceof HTMLVideoElement);
 
-  }, [input_mode]);
+    // // Webcam Mode
+    // if(input_mode && webCamRef.current.video !== null && typeof webCamRef.current !== 'undefined' && webCamRef.current !== null){
+    //     camera = new cam.Camera(webCamRef.current.video,{
+    //     onFrame: async()=>{
+    //       await mp_hands.send({image:webCamRef.current.video})
+    //     }
+    //     });
+    //     camera.start();
+    //     console.log("input mode: Webcam")
+
+    // }
+    // // Upload Mode
+    // else if(videoRef.current !== undefined && !(videoRef.current instanceof HTMLVideoElement)){
+    //     async function detectionFrame(){
+    //       await mp_hands.send({image: videoRef.current});
+    //       videoRef.current.requestVideoFrameCallback(detectionFrame);
+    //     }
+    //     console.log(typeof videoRef.current)
+    //     videoRef.current.requestVideoFrameCallback(detectionFrame);
+    //     console.log("input mode: Upload")
+    //   }
+    
+    // console.log("New Model Loaded:");
+    // console.log("mdc",mdc);
+    // console.log("mtc",mtc);
+
+  },);
 
     // EVENT HANDLERS
 
