@@ -14,10 +14,7 @@ import diagram_pinky_index_distance from "./Images/pinky-index-distance.png";
 import { joints_angles, tips_distance, tips_angles } from './diagram-map';
 
 const startTime = Date.now();
-
-const file_names = [];
 var mp_hands = null;
-var current_file = "";
 
 function HandTracker(){
 
@@ -32,7 +29,7 @@ function HandTracker(){
   const [diagram, setDiagram] = useState(diagram_right);
   const camRes1 = useRef(720);
   const camRes2 = useRef(1280);
-  let camera = null;  
+  
 
   // Model Config
   const minDetectionConfidence = useRef(0.75);
@@ -43,13 +40,6 @@ function HandTracker(){
   // Data
   const DataIn = useRef([]);
   const DataOut = useRef([]);
-  
-  // Video:
-  const [filesSrc, setFilesSrc] = useState(null); // array for the uploaded videos
-  const videoRef = useRef();
-  const [video_play, setVideoPlay] = useState(false);
-  const [file_index, setFileIndex] = useState(0);
-  const [input_mode, setinputMode] = useState(true); // true = webcam, false = upload
   
   const objectToCSVRow = (dataObject) => {
     let dataArray = [];
@@ -110,7 +100,8 @@ function HandTracker(){
     }
   }
 
-  let csvContent = "data:text/csv;charset=utf-8,lm_wrist_x,lm_wrist_y,lm_wrist_z,lm_thumb_cmc_x,lm_thumb_cmc_y,lm_thumb_cmc_z,lm_thumb_mcp_x,lm_thumb_mcp_y,lm_thumb_mcp_z,lm_thumb_ip_x,lm_thumb_ip_y,lm_thumb_ip_z,lm_thumb_tip_x,lm_thumb_tip_y,lm_thumb_tip_z,lm_index_mcp_x,lm_index_mcp_y,lm_index_mcp_z,lm_index_pip_x,lm_index_pip_y,lm_index_pip_z,lm_index_dip_x,lm_index_dip_y,lm_index_dip_z,lm_index_tip_x,lm_index_tip_y,lm_index_tip_z,lm_middle_mcp_x,lm_middle_mcp_y,lm_middle_mcp_z,lm_middle_pip_x,lm_middle_pip_y,lm_middle_pip_z,lm_middle_dip_x,lm_middle_dip_y,lm_middle_dip_z,lm_middle_tip_x,lm_middle_tip_y,lm_middle_tip_z,lm_ring_mcp_x,lm_ring_mcp_y,lm_ring_mcp_z,lm_ring_pip_x,lm_ring_pip_y,lm_ring_pip_z,lm_ring_dip_x,lm_ring_dip_y,lm_ring_dip_z,lm_ring_tip_x,lm_ring_tip_y,lm_ring_tip_z,lm_pinky_mcp_x,lm_pinky_mcp_y,lm_pinky_mcp_z,lm_pinky_pip_x,lm_pinky_pip_y,lm_pinky_pip_z,lm_pinky_dip_x,lm_pinky_dip_y,lm_pinky_dip_z,lm_pinky_tip_x,lm_pinky_tip_y,lm_pinky_tip_z,an_index_dip,an_index_mcp,an_index_pip,an_middle_dip,an_middle_mcp,an_middle_pip,an_pinky_dip,an_pinky_mcp,an_pinky_pip,an_ring_dip,an_ring_mcp,an_ring_pip,an_thumb_cmc,an_thumb_ip,an_thumb_mcp,di_thumb_index,di_index_middle,di_middle_ring,di_ring_pinky,di_index_pinky,an_thumb_index,an_index_middle,an_middle_ring,an_ring_pinky,\r\n";
+  // Landmark col names: lm_wrist_x,lm_wrist_y,lm_wrist_z,lm_thumb_cmc_x,lm_thumb_cmc_y,lm_thumb_cmc_z,lm_thumb_mcp_x,lm_thumb_mcp_y,lm_thumb_mcp_z,lm_thumb_ip_x,lm_thumb_ip_y,lm_thumb_ip_z,lm_thumb_tip_x,lm_thumb_tip_y,lm_thumb_tip_z,lm_index_mcp_x,lm_index_mcp_y,lm_index_mcp_z,lm_index_pip_x,lm_index_pip_y,lm_index_pip_z,lm_index_dip_x,lm_index_dip_y,lm_index_dip_z,lm_index_tip_x,lm_index_tip_y,lm_index_tip_z,lm_middle_mcp_x,lm_middle_mcp_y,lm_middle_mcp_z,lm_middle_pip_x,lm_middle_pip_y,lm_middle_pip_z,lm_middle_dip_x,lm_middle_dip_y,lm_middle_dip_z,lm_middle_tip_x,lm_middle_tip_y,lm_middle_tip_z,lm_ring_mcp_x,lm_ring_mcp_y,lm_ring_mcp_z,lm_ring_pip_x,lm_ring_pip_y,lm_ring_pip_z,lm_ring_dip_x,lm_ring_dip_y,lm_ring_dip_z,lm_ring_tip_x,lm_ring_tip_y,lm_ring_tip_z,lm_pinky_mcp_x,lm_pinky_mcp_y,lm_pinky_mcp_z,lm_pinky_pip_x,lm_pinky_pip_y,lm_pinky_pip_z,lm_pinky_dip_x,lm_pinky_dip_y,lm_pinky_dip_z,lm_pinky_tip_x,lm_pinky_tip_y,lm_pinky_tip_z
+  let csvContent = "data:text/csv;charset=utf-8,an_index_dip,an_index_mcp,an_index_pip,an_middle_dip,an_middle_mcp,an_middle_pip,an_pinky_dip,an_pinky_mcp,an_pinky_pip,an_ring_dip,an_ring_mcp,an_ring_pip,an_thumb_cmc,an_thumb_ip,an_thumb_mcp,di_thumb_index,di_index_middle,di_middle_ring,di_ring_pinky,di_index_pinky,an_thumb_index,an_index_middle,an_middle_ring,an_ring_pinky,\r\n";
   measurements.forEach((item)=>{
       csvContent += objectToCSVRow(item);
   }); 
@@ -161,13 +152,8 @@ function HandTracker(){
     } else {
       distances = calculateDistances2d(coordinates);
     }
-    
-    // console.log("Index coords:" + coordinates[9][0]*camRes1.current + "," + coordinates[9][1]*camRes2.current + "," + coordinates[9][2]*camRes1.current)
-    // console.log("Pinky coords:" + coordinates[21][0]*camRes1.current + "," + coordinates[21][1]*camRes2.current + "," + coordinates[21][2]*camRes1.current)
-    
+
     // Diagrams
-
-
     const canvasElementDiagram = canvasRefDiagram.current;
     const canvasCtxDia = canvasElementDiagram.getContext("2d");//.setTransform(2, 0, 0, 2, 0, 0);
     canvasElementDiagram.width = 296.5;
@@ -293,7 +279,7 @@ function HandTracker(){
           54
         )
         
-    DataIn.current.push([coordinates.slice(1),angles.slice(1),distances.slice(0,4),distances[4],anglesFF.slice(1)]);
+    DataIn.current.push([angles.slice(1),distances.slice(0,4),distances[4],anglesFF.slice(1)]);
   }
 
   const convertToVectorFullFinger = (coordinates) => {
@@ -583,21 +569,11 @@ function HandTracker(){
     return absolute;
   }
 
-  const countData = (array) =>{
-    const size = array.length;
-    return size;
-  };
-
   const onResults = (results)=>{
     let videoWidth = 200;
     let videoHeight = 200;
-    if(input_mode){
-      videoWidth = webCamRef.current.video.videoWidth;
-      videoHeight = webCamRef.current.video.videoHeight;
-    } else {
-      videoWidth = 168;
-      videoHeight = 300;
-    }
+    videoWidth = webCamRef.current.video.videoWidth;
+    videoHeight = webCamRef.current.video.videoHeight;
 
     //Sets height and width of canvas 
     canvasRef.current.width = videoWidth;
@@ -632,18 +608,18 @@ function HandTracker(){
   }
 
   useEffect(()=>{
-
+    let camera = null;
     // Load MP Hands
-    camera = null;
     const mdc = minDetectionConfidence.current;
     const mtc = minTrackingConfidence.current;
 
     //const mp_hands = new Hands({
-    mp_hands = new Hands({
-      locateFile:(file)=>{
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-      },
-    });
+    if(!mp_hands){
+      mp_hands = new Hands({
+        locateFile:(file)=>{
+          return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+        },
+      });
     // Configure
     mp_hands.setOptions({
       maxNumHands: 1,
@@ -651,83 +627,24 @@ function HandTracker(){
       minDetectionConfidence: mdc,
       minTrackingConfidence: mtc
     });
+    }
     // Collect/Display
     mp_hands.onResults(onResults);
-
-    camera = new cam.Camera(webCamRef.current.video, {
-      onFrame: async () => {
-        await mp_hands.send({image: webCamRef.current.video});
-      }
-    });
-    camera.start();
-    
-    // // Manage inputs    
-    // console.log(input_mode);
-    // console.log(videoRef.current instanceof HTMLVideoElement);
-
-    // // Webcam Mode
-    // if(input_mode && webCamRef.current.video !== null && typeof webCamRef.current !== 'undefined' && webCamRef.current !== null){
-    //     camera = new cam.Camera(webCamRef.current.video,{
-    //     onFrame: async()=>{
-    //       await mp_hands.send({image:webCamRef.current.video})
-    //     }
-    //     });
-    //     camera.start();
-    //     console.log("input mode: Webcam")
-
-    // }
-    // // Upload Mode
-    // else if(videoRef.current !== undefined && !(videoRef.current instanceof HTMLVideoElement)){
-    //     async function detectionFrame(){
-    //       await mp_hands.send({image: videoRef.current});
-    //       videoRef.current.requestVideoFrameCallback(detectionFrame);
-    //     }
-    //     console.log(typeof videoRef.current)
-    //     videoRef.current.requestVideoFrameCallback(detectionFrame);
-    //     console.log("input mode: Upload")
-    //   }
-    
-    // console.log("New Model Loaded:");
-    // console.log("mdc",mdc);
-    // console.log("mtc",mtc);
+    // Initialize
+    if(webCamRef.current.video !== null && typeof webCamRef.current !== 'undefined' && webCamRef.current !== null){
+      camera = new cam.Camera(webCamRef.current.video, {
+        onFrame: async () => {
+          await mp_hands.send({image: webCamRef.current.video});
+        }
+      });
+      camera.start();
+    }
 
   },);
 
     // EVENT HANDLERS
 
-  // UPLOADS
-
-  const onChangeUpload = (e) => {
-    setFileIndex(0);
-    const files = e.target.files;
-    file_names.length = 0;
-    
-    const srcs = [];
-    // Autoplay through the uploaded videos
-    for(let i = 0; i < files.length; i++){
-      srcs.push(URL.createObjectURL(files[i]));
-      file_names.push(files[i].name);
-    }
-    setFilesSrc(srcs);
-    console.log(file_names);
-    current_file = file_names[0]
-  };
-
-  const incrFileIndex = () => {
-    setFileIndex((file_index) => file_index + 1);
-    setVideoPlay(true);
-    if(file_index < file_names.length){
-      current_file = file_names[file_index+1];
-    }
-
-  }
-
   // CONFIG
-  //INPUT MODE
-  function onChangeInputMode(){
-    setinputMode(!input_mode);
-
-  }
 
   //DATA
   function eventDownloadAll(e){
@@ -761,22 +678,9 @@ function HandTracker(){
           <div className="container-display">
             {/* Inputs */}
             <Webcam ref={webCamRef} className="webcam"/>
-            {filesSrc && (
-            <video 
-              ref={videoRef} 
-              className="output-video" 
-              src={filesSrc[file_index]} 
-              autoPlay = {video_play}
-              onEnded = {incrFileIndex}
-              controls
-              muted
-            >Video is not support in this browser</video>
-            )}
+
             {/* Outputs */}
-            <canvas ref={canvasRef} className="output-canvas"/>
-            <p>Number of records: {countData(DataIn.current)}</p>
-            
-            <hr className="container-sep"/>
+            <canvas ref={canvasRef} className="output-canvas"/>            
 
             <div className="controls">
             <form method="post" onSubmit={handleControlSubmit} className="control-form">
@@ -811,8 +715,8 @@ function HandTracker(){
                     <div className='formItem'>
                       <label className="field-label">Dist. Calc. Dimension</label>
                       <select name="dimension" className='dropdown'>
-                        <option value="2">2D</option>
                         <option value="3">3D</option>
+                        <option value="2">2D</option>
                       </select>
                     </div>
                   </div>
@@ -820,19 +724,6 @@ function HandTracker(){
                 <button type='submit' className="button-form margin-push">Submit Config</button>
               
             </form>
-              <div className='controls-cell'>
-                <h2>Capture Mode</h2>
-                <div className='button-switch'>
-                  <button className='button-webcam' onClick={onChangeInputMode} style = {{ backgroundColor: input_mode ? "#5DA85B" : "#FFF", color: input_mode ? "#fff" : "#000"}}>Webcam</button>
-                  <button className='button-upload' onClick={onChangeInputMode} style = {{ backgroundColor: !input_mode ? "#5DA85B" : "#FFF", color: !input_mode ? "#fff" : "#000"}}>Upload</button>
-                </div>
-              </div>
-              <div className='controls-cell'>
-                <h2>Upload</h2>
-                <form className="container-upload">
-                  <input className="input-file" type='file' multiple onChange={(e)=>onChangeUpload(e)}/>
-                </form>
-              </div>
               <div className='controls-cell'>
                 <h2>Download</h2>
                 <form className="container-download">

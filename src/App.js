@@ -1,6 +1,5 @@
 import HandTracker from './components/HandTracker/HandTracker';
 import Home from './components/Home/Home';
-import ErrorPage from './components/ErrorPage/ErrorPage';
 import React from 'react';
 import {
   BrowserRouter as Router,

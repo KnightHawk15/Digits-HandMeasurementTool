@@ -23,3 +23,11 @@
 .home-container{
     text-align: center;
 }
+.simple-link {
+    text-decoration: none;
+    color: #303030;
+    margin:2em;
+}
+hr {
+    width: 1447px;
+}
