@@ -731,6 +731,7 @@ function HandTracker(){
                   <button className="button-form margin-push" onClick={eventDownloadAll}>CSV All</button>
                   <button className="button-form margin-push" onClick={eventDownloadCapture}>CSV Measure</button>
                   <button className="button-form margin-push" onClick={resetCollection}>Reset</button>
+                  <button className="button-form margin-push" onClick={resetCollection}>Switch Input Mode</button>
                 </form>
                 
               </div>
