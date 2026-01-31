@@ -33,13 +33,13 @@ p {
 
 /* Display */
 
-.panel-display{
+.panel-display-webcam{
   flex: 60;
   max-width: 810px;
   min-width: 500px;
 }
 
-.container-display {
+.container-display-webcam{
   background-color: rgb(240,240,240);
   margin: 0.5rem;
   padding: 0.75rem;
@@ -50,17 +50,21 @@ p {
   display: none;
 }
 
-.output-canvas{
-  position: relative;
-  text-align: "center";
-  box-sizing: border-box;
-  background-color: black;
-  width: 100%;
+.output-webcam {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f5f5f5;
+  width: 578px;
+  height: 783px;
+  object-fit: contain;
+  padding: 20px;
 }
 
 .output-video {
   display: block;
-  height: 70%;
+  height: 100%;
 }
 
 /* Controls */

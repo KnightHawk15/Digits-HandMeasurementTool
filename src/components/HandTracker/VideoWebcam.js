@@ -1,5 +1,5 @@
 import React from 'react';
-import './HandTracker.css';
+import './HandTracking.css';
 import Webcam from 'react-webcam';
 import {Hands} from '@mediapipe/hands'; 
 import * as hands from '@mediapipe/hands';
@@ -12,14 +12,15 @@ import diagram_tips_distance from "./Images/tips-distance.png";
 import diagram_wrist_tips_angles from "./Images/wrist-tips-angles.png";
 import diagram_pinky_index_distance from "./Images/pinky-index-distance.png";
 import { joints_angles, tips_distance, tips_angles } from './diagram-map';
+import { useNavigate } from 'react-router-dom';
 
 const startTime = Date.now();
-var mp_hands = null;
 
-function HandTracker(){
+function VideoWebcam(){
 
-  // Display: 
+  const navigate = useNavigate(); 
 
+  const mpHandsRef = useRef(null);
   const webCamRef = useRef(null);
   const canvasRef = useRef(null);
   const canvasRefDiagram = useRef(null);
@@ -36,6 +37,7 @@ function HandTracker(){
   const minTrackingConfidence = useRef(0.7);
   const indexLength = useRef(9);
   const dimension = useRef(3);
+  const sampleFps = useRef(10);
 
   // Data
   const DataIn = useRef([]);
@@ -75,6 +77,9 @@ function HandTracker(){
     if(formJson.minTrackingConfidence !== "") {
       minTrackingConfidence.current  = formJson.minTrackingConfidence;
     } 
+    if(formJson.sampleFps !== "") {
+      sampleFps.current = Number(formJson.sampleFps);
+    }
     if(formJson.IndexLength !== "")  {
       indexLength.current = formJson.IndexLength;
     }
@@ -570,6 +575,10 @@ function HandTracker(){
   }
 
   const onResults = (results)=>{
+  if (!canvasRef.current) return;
+  if (!results || !results.image) return;
+  if (!webCamRef.current || !webCamRef.current.video) return;
+
     let videoWidth = 200;
     let videoHeight = 200;
     videoWidth = webCamRef.current.video.videoWidth;
@@ -613,15 +622,14 @@ function HandTracker(){
     const mdc = minDetectionConfidence.current;
     const mtc = minTrackingConfidence.current;
 
-    //const mp_hands = new Hands({
-    if(!mp_hands){
-      mp_hands = new Hands({
+    if(!mpHandsRef.current){
+      mpHandsRef.current = new Hands({
         locateFile:(file)=>{
           return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
         },
       });
     // Configure
-    mp_hands.setOptions({
+    mpHandsRef.current.setOptions({
       maxNumHands: 1,
       modelComplexity: 1,
       minDetectionConfidence: mdc,
@@ -629,18 +637,35 @@ function HandTracker(){
     });
     }
     // Collect/Display
-    mp_hands.onResults(onResults);
+    mpHandsRef.current.onResults(onResults);
     // Initialize
-    if(webCamRef.current.video !== null && typeof webCamRef.current !== 'undefined' && webCamRef.current !== null){
+    if(mpHandsRef.current !== null && webCamRef.current.video !== null && (typeof webCamRef.current !== 'undefined') && webCamRef.current !== null){
       camera = new cam.Camera(webCamRef.current.video, {
         onFrame: async () => {
-          await mp_hands.send({image: webCamRef.current.video});
+        if(webCamRef.current && webCamRef.current.video.readyState === 4){
+          await mpHandsRef.current.send({image: webCamRef.current.video});
         }
+      }
       });
       camera.start();
     }
 
-  },);
+    return () => {
+    if (camera) camera.stop();
+  };
+
+  },[]);
+
+useEffect(() => {
+  return () => {
+    if (mpHandsRef.current) {
+      try { 
+        mpHandsRef.current.close(); 
+      } catch (e) {}
+      mpHandsRef.current = null;
+    }
+  };
+  }, []);
 
     // EVENT HANDLERS
 
@@ -662,6 +687,11 @@ function HandTracker(){
     DataOut.current.length = 0;
   }
 
+  function switchInputMode(e){
+    e.preventDefault();
+    navigate('/');
+  }
+
   function capture(e){
     e.preventDefault();
     DataOut.current.push(DataIn.current[DataIn.current.length-1]);
@@ -673,20 +703,20 @@ function HandTracker(){
       <div className="panel-row">
 
     
-        <div className="panel-display">
+        <div className="panel-display-webcam">
           <h1>Display & Controls</h1>
-          <div className="container-display">
+          <div className="container-display-webcam">
             {/* Inputs */}
             <Webcam ref={webCamRef} className="webcam"/>
 
             {/* Outputs */}
-            <canvas ref={canvasRef} className="output-canvas"/>            
+            <canvas ref={canvasRef} className="output-webcam"/>            
 
             <div className="controls">
             <form method="post" onSubmit={handleControlSubmit} className="control-form">
                 <div className="controls-cell">
                   <h2>Camera Resolution</h2>
-                  <div className="control-form">
+                  <div className="control-form-child">
                     <div className='formItem'>
                       <label className="field-label">Width</label>
                       <input name="camRes1.current" className="input-box" type="number" placeholder={camRes1.current} />
@@ -699,7 +729,7 @@ function HandTracker(){
                 </div>
                 <div className='controls-cell'>
                   <h2>Model Config</h2>
-                  <div className="control-form">
+                  <div className="control-form-child">
                     <div className='formItem'>
                       <label className="field-label">Min. Detection Conf.</label>
                       <input name="minDetectionConfidence" className="input-box" type="number" step="0.01" placeholder={minDetectionConfidence.current}/>
@@ -707,6 +737,10 @@ function HandTracker(){
                     <div className='formItem'>
                       <label className="field-label">Min. Tracking Conf.</label>
                       <input name="minTrackingConfidence" className="input-box" type="number" step="0.01" placeholder={minTrackingConfidence.current}/>
+                    </div>
+                    <div className='formItem'>
+                      <label className="field-label">Sample FPS</label>
+                      <input name="sampleFps" className="input-box" type="number" step="1" placeholder={sampleFps.current}/>
                     </div>
                     <div className='formItem'>
                       <label className="field-label">Index Finger MCT - TIP</label>
@@ -728,10 +762,9 @@ function HandTracker(){
                 <h2>Download</h2>
                 <form className="container-download">
                   <button className="button-form margin-push" onClick={capture}>Measure</button>
-                  <button className="button-form margin-push" onClick={eventDownloadAll}>CSV All</button>
+                  <button className="button-form margin-push" onClick={eventDownloadAll}>CSV Export</button>
                   <button className="button-form margin-push" onClick={eventDownloadCapture}>CSV Measure</button>
                   <button className="button-form margin-push" onClick={resetCollection}>Reset</button>
-                  <button className="button-form margin-push" onClick={resetCollection}>Switch Input Mode</button>
                 </form>
                 
               </div>
@@ -774,4 +807,4 @@ function HandTracker(){
   )
 }
 
-export default HandTracker;
+export default VideoWebcam;
