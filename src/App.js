@@ -1,4 +1,5 @@
-import HandTracker from './components/HandTracker/HandTracker';
+import VideoWebcam from './components/HandTracker/VideoWebcam';
+import VideoUpload from './components/HandTracker/VideoUpload';
 import Home from './components/Home/Home';
 import React from 'react';
 import {
@@ -12,7 +13,8 @@ function App() {
     <Router>
       <Routes>
         <Route exact path='/' element={<Home />}>
-          <Route path='/hand-tracker' element={<HandTracker />} />
+          <Route path='/video-webcam' element={<VideoWebcam />} />
+          <Route path='/video-upload' element={<VideoUpload />} />
         </Route>
       </Routes>
     </Router>
