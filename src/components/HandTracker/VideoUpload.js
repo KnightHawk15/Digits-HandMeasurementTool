@@ -20,7 +20,6 @@ import diagram_pinky_index_distance from './Images/pinky-index-distance.png';
 import { joints_angles, tips_distance, tips_angles } from './diagram-map';
 
 function VideoUpload() {
-  const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const [videos, setVideos] = useState([]);
@@ -37,6 +36,7 @@ function VideoUpload() {
   const camRes2 = useRef(1280);
   const dimension = useRef(3);
   const sampleFps = useRef(20);
+  const indexLength = useRef(9); // cm
   
   // Data
   const DataIn = useRef([]);
@@ -71,13 +71,13 @@ function VideoUpload() {
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+    if (results.multiHandLandmarks) {
       for (const landmarks of results.multiHandLandmarks) {
         drawConnectors(canvasCtx, landmarks, Hands.HAND_CONNECTIONS, {
           color: '#00ff00',
-          lineWidth: 5,
+          lineWidth: 2,
         });
-        drawLandmarks(canvasCtx, landmarks, { color: '#ff0000', lineWidth: 2 });
+        drawLandmarks(canvasCtx, landmarks, {color: "#00ffd0", lineWidth: 1});
       }
       
       // Collect data
@@ -117,9 +117,9 @@ function VideoUpload() {
 
     var distances = [];
     if (dimension.current === 3) {
-      distances = calculateDistances(coordinates);
+      distances = calculateDistances(coordinates, indexLength.current);
     } else {
-      distances = calculateDistances2d(coordinates);
+      distances = calculateDistances2d(coordinates, indexLength.current);
     }
     DataIn.current.push([currentFileName.current, angles.slice(1), distances.slice(0, 4), distances[4], anglesFF.slice(1)]);
 
@@ -364,6 +364,9 @@ function VideoUpload() {
     if (formJson.sampleFps !== '') {
       sampleFps.current = Number(formJson.sampleFps);
     }
+    if (formJson.indexLength !== '') {
+      indexLength.current = formJson.indexLength;
+    }
     if (formJson.dimension !== '') {
       dimension.current = formJson.dimension;
     }
@@ -380,7 +383,7 @@ function VideoUpload() {
               <canvas ref={canvasRef} className="output-canvas" />
             </div>
 
-            <div className="controls">
+            <div className="controls-files">
               <div className="controls-cell">
                 <h2>Upload Videos</h2>
                 <form className="container-upload">
@@ -463,13 +466,11 @@ function VideoUpload() {
               </div>
             </div>
             <form method="post" onSubmit={handleControlSubmit} className="control-form">
-                <div className="controls">
                 <div className="controls-cell">
-
-                  <h2>Camera Resolution</h2>
+                  <h2>Model Config</h2>
                   <div className="control-form-child">
                     <div className="formItem">
-                      <label className="field-label">Width</label>
+                      <label className="field-label">Camera Res. Width</label>
                       <input
                         name="camRes1"
                         className="input-box"
@@ -478,7 +479,7 @@ function VideoUpload() {
                       />
                     </div>
                     <div className="formItem">
-                      <label className="field-label">Height</label>
+                      <label className="field-label">Camera Res. Height</label>
                       <input
                         name="camRes2"
                         className="input-box"
@@ -496,12 +497,6 @@ function VideoUpload() {
                         placeholder={sampleFps.current}
                       />
                     </div>
-                  </div>
-                </div>
-                </div>
-                <div className="controls-cell">
-                  <h2>Model Config</h2>
-                  <div className="control-form-child">
                     <div className="formItem">
                       <label className="field-label">Min. Detection Conf.</label>
                       <input
@@ -529,6 +524,16 @@ function VideoUpload() {
                         <option value="3">3D</option>
                         <option value="2">2D</option>
                       </select>
+                    </div>
+                    <div className="formItem">
+                      <label className="field-label">Index Finger MCT - TIP (cm)</label>
+                      <input
+                        name="indexLength"
+                        className="input-box"
+                        type="number"
+                        step="1"
+                        placeholder={indexLength.current}
+                      />
                     </div>
                   </div>
                 </div>

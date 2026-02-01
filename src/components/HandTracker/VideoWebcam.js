@@ -12,13 +12,20 @@ import diagram_tips_distance from "./Images/tips-distance.png";
 import diagram_wrist_tips_angles from "./Images/wrist-tips-angles.png";
 import diagram_pinky_index_distance from "./Images/pinky-index-distance.png";
 import { joints_angles, tips_distance, tips_angles } from './diagram-map';
-import { useNavigate } from 'react-router-dom';
+import {
+  convertToVector,
+  convertToVectorFullFinger,
+  calculateMagnitude,
+  calculateAngle,
+  calculateAngleFullFinger,
+  calculateDistances,
+  calculateDistances2d,
+  downloadCSV,
+} from './handTrackingUtils';
 
 const startTime = Date.now();
 
 function VideoWebcam(){
-
-  const navigate = useNavigate(); 
 
   const mpHandsRef = useRef(null);
   const webCamRef = useRef(null);
@@ -42,17 +49,6 @@ function VideoWebcam(){
   // Data
   const DataIn = useRef([]);
   const DataOut = useRef([]);
-  
-  const objectToCSVRow = (dataObject) => {
-    let dataArray = [];
-    for (let o in dataObject) {
-        let innerValue = dataObject[o]===null? '' : dataObject[o].toString();
-        let result = innerValue.replace(/"/g, ' ');
-        result = ' ' + result + ', ';
-        dataArray.push(result);
-    }
-    return dataArray.join(' ') + '\r\n';
-  }
 
   //CONTROL FORM SUBMIT
   function handleControlSubmit(e){
@@ -90,35 +86,6 @@ function VideoWebcam(){
 
   }
 
-  const downloadCSV = (arrayOfObjects=[]) =>{
-
-  let measurements = arrayOfObjects;
-    if (!measurements.length) {
-      return alert('No data available for download.');
-  }
-
-  // Last measurement flagging
-  let temp_file = measurements[0][17]; //get first file_name
-  for(let i = 0; i < measurements.length; i++){
-    if(temp_file !== measurements[i][17]){
-      temp_file = measurements[i][17];
-    }
-  }
-
-  // Landmark col names: lm_wrist_x,lm_wrist_y,lm_wrist_z,lm_thumb_cmc_x,lm_thumb_cmc_y,lm_thumb_cmc_z,lm_thumb_mcp_x,lm_thumb_mcp_y,lm_thumb_mcp_z,lm_thumb_ip_x,lm_thumb_ip_y,lm_thumb_ip_z,lm_thumb_tip_x,lm_thumb_tip_y,lm_thumb_tip_z,lm_index_mcp_x,lm_index_mcp_y,lm_index_mcp_z,lm_index_pip_x,lm_index_pip_y,lm_index_pip_z,lm_index_dip_x,lm_index_dip_y,lm_index_dip_z,lm_index_tip_x,lm_index_tip_y,lm_index_tip_z,lm_middle_mcp_x,lm_middle_mcp_y,lm_middle_mcp_z,lm_middle_pip_x,lm_middle_pip_y,lm_middle_pip_z,lm_middle_dip_x,lm_middle_dip_y,lm_middle_dip_z,lm_middle_tip_x,lm_middle_tip_y,lm_middle_tip_z,lm_ring_mcp_x,lm_ring_mcp_y,lm_ring_mcp_z,lm_ring_pip_x,lm_ring_pip_y,lm_ring_pip_z,lm_ring_dip_x,lm_ring_dip_y,lm_ring_dip_z,lm_ring_tip_x,lm_ring_tip_y,lm_ring_tip_z,lm_pinky_mcp_x,lm_pinky_mcp_y,lm_pinky_mcp_z,lm_pinky_pip_x,lm_pinky_pip_y,lm_pinky_pip_z,lm_pinky_dip_x,lm_pinky_dip_y,lm_pinky_dip_z,lm_pinky_tip_x,lm_pinky_tip_y,lm_pinky_tip_z
-  let csvContent = "data:text/csv;charset=utf-8,an_index_dip,an_index_mcp,an_index_pip,an_middle_dip,an_middle_mcp,an_middle_pip,an_pinky_dip,an_pinky_mcp,an_pinky_pip,an_ring_dip,an_ring_mcp,an_ring_pip,an_thumb_cmc,an_thumb_ip,an_thumb_mcp,di_thumb_index,di_index_middle,di_middle_ring,di_ring_pinky,di_index_pinky,an_thumb_index,an_index_middle,an_middle_ring,an_ring_pinky,\r\n";
-  measurements.forEach((item)=>{
-      csvContent += objectToCSVRow(item);
-  }); 
-    let encodedUri = encodeURI(csvContent);
-    let link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "landmarkData.csv");
-    document.body.appendChild(link); 
-    link.click();
-    document.body.removeChild(link);
-  }
-
   const collectData = (objArr) =>{
     if(objArr.multiHandLandmarks.length === 0){
       return;
@@ -141,22 +108,24 @@ function VideoWebcam(){
     }
     
 
-    const vectors = convertToVector(coordinates);
+    const vectors = convertToVector(coordinates,camRes1.current,camRes2.current);
     const magnitudes =  calculateMagnitude(vectors);
 
     //Full Finger Angles:
     const coordinatesFF = [coordinates[1],coordinates[5],coordinates[9],coordinates[13],coordinates[17],coordinates[21]];
-    const [vectorsFF, magnitudeFF] = convertToVectorFullFinger(coordinatesFF);
+    const [vectorsFF, magnitudeFF] = convertToVectorFullFinger(coordinatesFF,camRes1.current,camRes2.current);
     const anglesFF = calculateAngleFullFinger(vectorsFF,magnitudeFF,deltaTime);
 
     const angles = calculateAngle(vectors, magnitudes, deltaTime);
     
     var distances = [];
     if(dimension.current === 3){
-      distances = calculateDistances(coordinates);
+      distances = calculateDistances(coordinates, indexLength.current);
     } else {
-      distances = calculateDistances2d(coordinates);
+      distances = calculateDistances2d(coordinates, indexLength.current);
     }
+
+    DataIn.current.push(['Webcam',angles.slice(1),distances.slice(0,4),distances[4],anglesFF.slice(1)]);
 
     // Diagrams
     const canvasElementDiagram = canvasRefDiagram.current;
@@ -284,294 +253,6 @@ function VideoWebcam(){
           54
         )
         
-    DataIn.current.push([angles.slice(1),distances.slice(0,4),distances[4],anglesFF.slice(1)]);
-  }
-
-  const convertToVectorFullFinger = (coordinates) => {
-    const vectors = [];
-    for(let i = 1; i<coordinates.length; i++){
-      const vx = (coordinates[i][0] - coordinates[0][0])*camRes1.current;
-      const vy = (coordinates[i][1] - coordinates[0][1])*camRes2.current;
-      const vz = (coordinates[i][2] - coordinates[0][2])*camRes1.current;
-      vectors.push([parseFloat(vx),parseFloat(vy),parseFloat(vz)])
-    }
-    const magnitudes = [];
-    for(let j = 0; j < vectors.length; j++){
-      magnitudes.push(
-        parseFloat(abs(vectors[j][0],vectors[j][1],vectors[j][2]))
-      );
-    }
-    return [vectors, magnitudes];
-  }
-
-  //Checks out 
-  const convertToVector = (coordinates) =>{
-    //console.log(coordinates[8][1]);
-    //Landmark 0 --> Landmark 4 (0,1,2,3,4)
-    const vectors1 = [];
-    //Landmark 0 --> Landmark 8 (0,5,6,7,8)
-    const vectors2 = [];
-    //Landmark 0 --> Landmark 12 (0,9,10,11,12)
-    const vectors3 = [];
-    //Landmark 0 --> Landmark 16 (0,13,14,15,16)
-    const vectors4 = [];
-    //Landmark 0 --> Landmark 20 (0,17,18,19,20)
-    const vectors5 = [];
-
-    //Each set of vectors 
-    const allVectors = [];
-    //camRes1.current => x,z camRes2.current => y 
-    //Split hand coordinates into 5 arrays (sections)
-    //Section 1 - has 4 vectors 
-    for(let i = 1; i<5; i++){
-      const x1 = coordinates[i][0] * camRes1.current;
-      const y1 = coordinates[i][1] * camRes2.current;
-      const z1 = coordinates[i][2] * camRes1.current;
-      const x2 = coordinates[i+1][0] * camRes1.current;
-      const y2 = coordinates[i+1][1]* camRes2.current;
-      const z2 = coordinates[i+1][2]* camRes1.current;
-      let vx = (x2 - x1);
-      let vy = (y2 - y1);
-      let vz = (z2 - z1);
-      vx=parseFloat(vx)
-      vy=parseFloat(vy)
-      vz=parseFloat(vz)
-      vectors1.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
-    }
-
-    //Section 2
-    for(let j = 1; j<5; j++){
-      //initially add 4 after first increment 
-      if(j===1){
-        let vx = ((coordinates[j+5][0]* camRes1.current)-(coordinates[j][0]* camRes1.current));
-        let vy = ((coordinates[j+5][1]* camRes2.current)-(coordinates[j][1]* camRes2.current));
-        let vz = ((coordinates[j+5][2]* camRes1.current)-(coordinates[j][2]* camRes1.current));
-        vx=parseFloat(vx)
-        vy=parseFloat(vy)
-        vz=parseFloat(vz)
-        vectors2.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
-      }
-      else{
-        const x1 = coordinates[j+4][0]* camRes1.current;
-        const y1 = coordinates[j+4][1]* camRes2.current;
-        const z1 = coordinates[j+4][2]* camRes1.current;
-        const x2 = coordinates[j+5][0]* camRes1.current;
-        const y2 = coordinates[j+5][1]* camRes2.current;
-        const z2 = coordinates[j+5][2]* camRes1.current;
-        let vx = (x2 - x1);
-        let vy = (y2 - y1);
-        let vz = (z2 - z1);
-        vx=parseFloat(vx)
-        vy=parseFloat(vy)
-        vz=parseFloat(vz)
-        vectors2.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
-      }
-    }
-
-    //Section 3
-    for(let k = 1; k<5; k++){
-      //initially add 4 after first increment 
-      if(k===1){
-        let vx = ((coordinates[k+9][0]* camRes1.current)-(coordinates[k][0]* camRes1.current));
-        let vy = ((coordinates[k+9][1]* camRes2.current)-(coordinates[k][1]* camRes2.current));
-        let vz = ((coordinates[k+9][2]* camRes1.current)-(coordinates[k][2]* camRes1.current));
-        vx=parseFloat(vx)
-        vy=parseFloat(vy)
-        vz=parseFloat(vz)
-        vectors3.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
-      }
-      else{
-        const x1 = coordinates[k+8][0]* camRes1.current;
-        const y1 = coordinates[k+8][1]* camRes2.current;
-        const z1 = coordinates[k+8][2]* camRes1.current;
-        const x2 = coordinates[k+9][0]* camRes1.current;
-        const y2 = coordinates[k+9][1]* camRes2.current;
-        const z2 = coordinates[k+9][2]* camRes1.current;
-        //1. 10, 1  2. 11, 10 3. 12, 11 4. 13, 12
-        let vx = (x2 - x1);
-        let vy = (y2 - y1);
-        let vz = (z2 - z1);
-        vx=parseFloat(vx)
-        vy=parseFloat(vy)
-        vz=parseFloat(vz)
-        vectors3.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
-      }
-    }
-
-    //Section 4
-    for(let u = 1; u<5; u++){
-      //initially add 4 after first increment 
-      if(u===1){
-        let vx = ((coordinates[u+13][0]* camRes1.current)-(coordinates[u][0]* camRes1.current));
-        let vy = ((coordinates[u+13][1]* camRes2.current)-(coordinates[u][1]* camRes2.current));
-        let vz = ((coordinates[u+13][2]* camRes1.current)-(coordinates[u][2]* camRes1.current));
-        vx=parseFloat(vx)
-        vy=parseFloat(vy)
-        vz=parseFloat(vz)
-        vectors4.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
-      }
-      else{
-        const x1 = coordinates[u+12][0]* camRes1.current;
-        const y1 = coordinates[u+12][1]* camRes2.current;
-        const z1 = coordinates[u+12][2]* camRes1.current;
-        const x2 = coordinates[u+13][0]* camRes1.current;
-        const y2 = coordinates[u+13][1]* camRes2.current;
-        const z2 = coordinates[u+13][2]* camRes1.current;
-        //1.  14, 1   2. 15, 14   3. 16, 15   4. 17, 16
-        let vx = (x2 - x1);
-        let vy = (y2 - y1);
-        let vz = (z2 - z1);
-        
-        vectors4.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
-      }
-    }
-
-    //Section 5
-    for(let v = 1; v<5; v++){
-      //initially add 4 after first increment 
-      if(v===1){
-        let vx = ((coordinates[v+17][0]* camRes1.current)-(coordinates[v][0]* camRes1.current));
-        let vy = ((coordinates[v+17][1]* camRes2.current)-(coordinates[v][1]* camRes2.current));
-        let vz = ((coordinates[v+17][2]* camRes1.current)-(coordinates[v][2]* camRes1.current));
-        
-        vectors5.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
-      }
-      else{
-        const x1 = coordinates[v+16][0]* camRes1.current;
-        const y1 = coordinates[v+16][1]* camRes2.current;
-        const z1 = coordinates[v+16][2]* camRes1.current;
-        const x2 = coordinates[v+17][0]* camRes1.current;
-        const y2 = coordinates[v+17][1]* camRes2.current;
-        const z2 = coordinates[v+17][2]* camRes1.current;
-        //1. 18, 1   2. 19, 18  3. 20, 19 4. 21, 20
-        let vx = (x2 - x1);
-        let vy = (y2 - y1);
-        let vz = (z2 - z1);
-        
-        vectors5.push([parseFloat(vx), parseFloat(vy), parseFloat(vz)]);
-      }
-    }
-
-    allVectors.push(vectors1, vectors2, vectors3, vectors4, vectors5)
-
-    return allVectors;
-  }
-
-  //Checks out 
-  const calculateMagnitude = (vectors) =>{
-    const magnitudes = [];
-    for(let i = 0; i<vectors.length; i++){
-      const magnitudeSet = [];
-      for(let j = 0; j<vectors.length-1; j++){
-        let x = vectors[i][j][0];
-        let y = vectors[i][j][1];
-        let z = vectors[i][j][2];
-        let absVal = abs(x,y,z);
-        parseFloat(absVal);
-        magnitudeSet.push(absVal);
-      }
-      magnitudes.push(magnitudeSet);
-    }
-    return magnitudes;
-  }
-  
-  // Helper Func: Distance between two 3D points
-  const dbP = (p1,p2) => {
-    return parseFloat(Math.sqrt(
-        Math.pow((p2[0]-p1[0]),2)+
-        Math.pow((p2[1]-p1[1]),2)+
-        Math.pow((p2[2]-p1[2]),2)
-      ));
-    // return Math.sqrt((p2[0]-p1[0])^2+(p2[2]-p1[2])^2+(p2[1]-p1[1])^2);
-  }
-  // Helper Func: Distance between two 3D points
-  const dbP_2d = (p1,p2) => {
-    return parseFloat(Math.sqrt(
-        Math.pow((p2[0]-p1[0]),2)+
-        Math.pow((p2[1]-p1[1]),2)+
-        0
-      ));
-    // return Math.sqrt((p2[0]-p1[0])^2+(p2[2]-p1[2])^2+(p2[1]-p1[1])^2);
-  }
-
-  const calculateDistances = (coordinates) => {
-
-    const distances = []; 
-    const pixelScale = indexLength.current/dbP(coordinates[6],coordinates[9]); // Could be an issue when measuring the full finger as when it's bent the distance will shorten.
-
-    distances.push(dbP(coordinates[5],coordinates[9]));
-    distances.push(dbP(coordinates[9],coordinates[13]));
-    distances.push(dbP(coordinates[13],coordinates[17]));
-    distances.push(dbP(coordinates[17],coordinates[21]));
-    distances.push(dbP(coordinates[9],coordinates[21])); //index -> pinky
-    distances.push(dbP(coordinates[6],coordinates[9])); //index check
-
-    for(let i = 0; i < distances.length; i++){
-      distances[i] = distances[i]*pixelScale;
-    }
-
-    return distances;
-  }
-
-  const calculateDistances2d = (coordinates) => {
-    
-    const distances = []; 
-    const pixelScale = indexLength.current/dbP(coordinates[6],coordinates[9]); // Could be an issue when measuring the full finger as when it's bent the distance will shorten.
-
-    distances.push(dbP_2d(coordinates[5],coordinates[9]));
-    distances.push(dbP_2d(coordinates[9],coordinates[13]));
-    distances.push(dbP_2d(coordinates[13],coordinates[17]));
-    distances.push(dbP_2d(coordinates[17],coordinates[21]));
-    distances.push(dbP_2d(coordinates[9],coordinates[21])); //index -> pinky
-    distances.push(dbP_2d(coordinates[6],coordinates[9])); //index check
-
-    for(let i = 0; i < distances.length; i++){
-      distances[i] = distances[i]*pixelScale;
-    }
-
-    return distances;
-  }
-  const calculateAngle = (vectors, magnitudes, time) => {
-    const angles = [time];
-    
-  //theta = arccos((v1 dot v2)/(|v1||v2|))
-  for(let set = 0; set<5; set++){
-    angles.push(angle(vectors[set][0], vectors[set][1], magnitudes[set][0], magnitudes[set][1]));
-    angles.push(angle(vectors[set][1], vectors[set][2], magnitudes[set][1], magnitudes[set][2]));
-    angles.push(angle(vectors[set][2], vectors[set][3], magnitudes[set][2], magnitudes[set][3]));
-  }
-  return angles;
-  }
-
-  const calculateAngleFullFinger = (vectors, magnitudes, time) => {
-    const angles = [time];
-
-    angles.push(angle(vectors[0],vectors[1],magnitudes[0],magnitudes[1]));
-    angles.push(angle(vectors[1],vectors[2],magnitudes[1],magnitudes[2]));
-    angles.push(angle(vectors[2],vectors[3],magnitudes[2],magnitudes[3]));
-    angles.push(angle(vectors[3],vectors[4],magnitudes[3],magnitudes[4]));
-
-    return angles
-  }
-
-  const angle = (vectorOne, vectorTwo, magnitudeOne, magnitudeTwo) => {
-    let dotProductResult = dotProduct(vectorOne, vectorTwo);
-    let innerCalculation = dotProductResult/(magnitudeOne*magnitudeTwo);
-    let angleResult = Math.acos(innerCalculation);
-    angleResult = parseFloat(angleResult) * (180/Math.PI);
-    angleResult = angleResult.toFixed(2);
-    return angleResult;
-  }
-
-  const dotProduct = (v1, v2) =>{
-    let result = (v1[0]*v2[0])+(v1[1]*v2[1])+(v1[2]*v2[2]);
-    return result; 
-  }
-
-  const abs = (x,y,z) =>{
-    const squareSum = Math.pow(x,2) + Math.pow(y,2) + Math.pow(z,2);
-    const absolute = Math.sqrt(squareSum); 
-    return absolute;
   }
 
   const onResults = (results)=>{
@@ -654,7 +335,7 @@ function VideoWebcam(){
     if (camera) camera.stop();
   };
 
-  },[]);
+  });
 
 useEffect(() => {
   return () => {
@@ -687,11 +368,6 @@ useEffect(() => {
     DataOut.current.length = 0;
   }
 
-  function switchInputMode(e){
-    e.preventDefault();
-    navigate('/');
-  }
-
   function capture(e){
     e.preventDefault();
     DataOut.current.push(DataIn.current[DataIn.current.length-1]);
@@ -713,51 +389,7 @@ useEffect(() => {
             <canvas ref={canvasRef} className="output-webcam"/>            
 
             <div className="controls">
-            <form method="post" onSubmit={handleControlSubmit} className="control-form">
-                <div className="controls-cell">
-                  <h2>Camera Resolution</h2>
-                  <div className="control-form-child">
-                    <div className='formItem'>
-                      <label className="field-label">Width</label>
-                      <input name="camRes1.current" className="input-box" type="number" placeholder={camRes1.current} />
-                    </div>
-                    <div className='formItem'>
-                      <label className="field-label">Height</label>
-                      <input name="camRes2.current" className="input-box" type="number" placeholder={camRes2.current}/>
-                    </div>
-                  </div>
-                </div>
-                <div className='controls-cell'>
-                  <h2>Model Config</h2>
-                  <div className="control-form-child">
-                    <div className='formItem'>
-                      <label className="field-label">Min. Detection Conf.</label>
-                      <input name="minDetectionConfidence" className="input-box" type="number" step="0.01" placeholder={minDetectionConfidence.current}/>
-                    </div>
-                    <div className='formItem'>
-                      <label className="field-label">Min. Tracking Conf.</label>
-                      <input name="minTrackingConfidence" className="input-box" type="number" step="0.01" placeholder={minTrackingConfidence.current}/>
-                    </div>
-                    <div className='formItem'>
-                      <label className="field-label">Sample FPS</label>
-                      <input name="sampleFps" className="input-box" type="number" step="1" placeholder={sampleFps.current}/>
-                    </div>
-                    <div className='formItem'>
-                      <label className="field-label">Index Finger MCT - TIP</label>
-                      <input name="IndexLength" className="input-box" type="number" step="0.01" placeholder={indexLength.current} />
-                    </div>
-                    <div className='formItem'>
-                      <label className="field-label">Dist. Calc. Dimension</label>
-                      <select name="dimension" className='dropdown'>
-                        <option value="3">3D</option>
-                        <option value="2">2D</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                <button type='submit' className="button-form margin-push">Submit Config</button>
-              
-            </form>
+            
               <div className='controls-cell'>
                 <h2>Download</h2>
                 <form className="container-download">
@@ -799,7 +431,48 @@ useEffect(() => {
                   <img id="diagram_preload_IPDist" src={diagram_pinky_index_distance} alt="hand diagram" className="diagrams_src"/>
                 </div>
               </div>
-            
+              <div className="controls">
+            <form method="post" onSubmit={handleControlSubmit} className="control-form">
+                <div className='controls-cell'>
+                  <h2>Model Config</h2>
+                  <div className="control-form-child">
+                    <div className='formItem'>
+                      <label className="field-label">Camera Res. Width</label>
+                      <input name="camRes1.current" className="input-box" type="number" placeholder={camRes1.current} />
+                    </div>
+                    <div className='formItem'>
+                      <label className="field-label">Camera Res. Height</label>
+                      <input name="camRes2.current" className="input-box" type="number" placeholder={camRes2.current}/>
+                    </div>
+                    <div className='formItem'>
+                      <label className="field-label">Min. Detection Conf.</label>
+                      <input name="minDetectionConfidence" className="input-box" type="number" step="0.01" placeholder={minDetectionConfidence.current}/>
+                    </div>
+                    <div className='formItem'>
+                      <label className="field-label">Min. Tracking Conf.</label>
+                      <input name="minTrackingConfidence" className="input-box" type="number" step="0.01" placeholder={minTrackingConfidence.current}/>
+                    </div>
+                    <div className='formItem'>
+                      <label className="field-label">Sample FPS</label>
+                      <input name="sampleFps" className="input-box" type="number" step="1" placeholder={sampleFps.current}/>
+                    </div>
+                    <div className='formItem'>
+                      <label className="field-label">Index Finger MCT - TIP</label>
+                      <input name="IndexLength" className="input-box" type="number" step="0.01" placeholder={indexLength.current} />
+                    </div>
+                    <div className='formItem'>
+                      <label className="field-label">Dist. Calc. Dimension</label>
+                      <select name="dimension" className='dropdown'>
+                        <option value="3">3D</option>
+                        <option value="2">2D</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <button type='submit' className="button-form margin-push">Submit Config</button>
+              
+            </form>
+            </div>
           </div>
         </div>
       </div>

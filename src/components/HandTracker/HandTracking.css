@@ -20,6 +20,7 @@
   text-align: center;
   width: 70%;
   padding: 20px;
+  margin: 0 auto;
 }
 
 h1 {
@@ -59,7 +60,7 @@ p {
 .panel-display,
 .panel-display-webcam {
   flex: 0 1 auto;
-  width: 70%;
+  width: 60%;
 }
 
 .panel-data {
@@ -90,18 +91,19 @@ p {
 
 .output-canvas,
 .output-webcam {
-  width: 100%;
-  max-width: 600px;
-  height: auto;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: #f5f5f5;
-  box-sizing: border-box;
-  object-fit: contain;
+width: 100%;
+max-width: 90%;
+height: 920px;
+    /* border: 1px solid #ddd; */
+    /* border: 1px solid var(--border-color); */
+    /* border-radius: 4px; */
+    /* background: #f5f5f5; */
+    box-sizing: border-box;
+    object-fit: contain;
 }
 
 /* Controls */
-.controls {
+.controls-files, .controls {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -123,6 +125,7 @@ p {
 .control-form-child {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   gap: 10px;
   width: 100%;
 }
@@ -166,16 +169,20 @@ p {
 
 /* File Input */
 .file-input {
-  padding: 10px;
-  border: 2px solid var(--border-color);
-  border-radius: 4px;
+  /* make native input invisible so only the styled pseudo-button shows */
+  padding: 0;
+  border: none;
+  background: transparent;
   cursor: pointer;
-  background-color: var(--bg-white);
   font-family: 'Roboto', sans-serif;
   color: transparent;
-  width: 6.5rem;
-  margin-right: 0.5rem;
+  width: auto;
+  margin-right: 0;
+  display: inline-block;
+  line-height: 1;
+  overflow: visible;
 }
+
 
 .file-input:hover {
   border-color: var(--primary-color);
@@ -205,6 +212,7 @@ p {
 }
 
 /* Video List */
+
 .video-list {
   max-height: 200px;
   overflow-y: auto;
@@ -213,6 +221,11 @@ p {
   border-radius: 4px;
   background-color: var(--bg-white);
   margin-top: 10px;
+  display: none;
+}
+
+.video-list:has(> div) {
+  display: block;
 }
 
 .video-list p {
@@ -295,7 +308,14 @@ p {
 }
 
 /* Download Section */
-.container-upload,
+.container-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
 .container-download {
   display: flex;
   flex-direction: row;

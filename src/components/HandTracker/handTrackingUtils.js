@@ -40,61 +40,62 @@ export const dotProduct = (v1, v2) =>{
     return result; 
   }
 
-export const calculateDistances = (coordinates) => {
-  const distances = [];
-  // Distance between tips: index-middle, middle-ring, ring-pinky, pinky-thumb, index-pinky
-  const indexTip = coordinates[8];
-  const middleTip = coordinates[12];
-  const ringTip = coordinates[16];
-  const pinkyTip = coordinates[20];
-  const thumbTip = coordinates[4];
+export const calculateDistances = (coordinates, indexLength) => {
 
-  distances.push(
-    abs(indexTip[0] - middleTip[0], indexTip[1] - middleTip[1], indexTip[2] - middleTip[2])
-  );
-  distances.push(
-    abs(middleTip[0] - ringTip[0], middleTip[1] - ringTip[1], middleTip[2] - ringTip[2])
-  );
-  distances.push(
-    abs(ringTip[0] - pinkyTip[0], ringTip[1] - pinkyTip[1], ringTip[2] - pinkyTip[2])
-  );
-  distances.push(
-    abs(pinkyTip[0] - thumbTip[0], pinkyTip[1] - thumbTip[1], pinkyTip[2] - thumbTip[2])
-  );
-  distances.push(
-    abs(indexTip[0] - pinkyTip[0], indexTip[1] - pinkyTip[1], indexTip[2] - pinkyTip[2])
-  );
+    const distances = []; 
+    const pixelScale = indexLength/dbP(coordinates[6],coordinates[9]); // Could be an issue when measuring the full finger as when it's bent the distance will shorten.
 
-  return distances;
-};
+    distances.push(dbP(coordinates[5],coordinates[9]));
+    distances.push(dbP(coordinates[9],coordinates[13]));
+    distances.push(dbP(coordinates[13],coordinates[17]));
+    distances.push(dbP(coordinates[17],coordinates[21]));
+    distances.push(dbP(coordinates[9],coordinates[21])); //index -> pinky
+    distances.push(dbP(coordinates[6],coordinates[9])); //index check
 
-export const calculateDistances2d = (coordinates) => {
-  const distances = [];
-  // 2D distance calculation (ignoring z)
-  const indexTip = coordinates[8];
-  const middleTip = coordinates[12];
-  const ringTip = coordinates[16];
-  const pinkyTip = coordinates[20];
-  const thumbTip = coordinates[4];
+    for(let i = 0; i < distances.length; i++){
+      distances[i] = distances[i]*pixelScale;
+    }
 
-  distances.push(
-    Math.sqrt((indexTip[0] - middleTip[0]) ** 2 + (indexTip[1] - middleTip[1]) ** 2)
-  );
-  distances.push(
-    Math.sqrt((middleTip[0] - ringTip[0]) ** 2 + (middleTip[1] - ringTip[1]) ** 2)
-  );
-  distances.push(
-    Math.sqrt((ringTip[0] - pinkyTip[0]) ** 2 + (ringTip[1] - pinkyTip[1]) ** 2)
-  );
-  distances.push(
-    Math.sqrt((pinkyTip[0] - thumbTip[0]) ** 2 + (pinkyTip[1] - thumbTip[1]) ** 2)
-  );
-  distances.push(
-    Math.sqrt((indexTip[0] - pinkyTip[0]) ** 2 + (indexTip[1] - pinkyTip[1]) ** 2)
-  );
+    return distances;
+  }
 
-  return distances;
-};
+export const calculateDistances2d = (coordinates,indexLength) => {
+    
+    const distances = []; 
+    const pixelScale = indexLength/dbP_2d(coordinates[6],coordinates[9]); // Could be an issue when measuring the full finger as when it's bent the distance will shorten.
+
+    distances.push(dbP_2d(coordinates[5],coordinates[9]));
+    distances.push(dbP_2d(coordinates[9],coordinates[13]));
+    distances.push(dbP_2d(coordinates[13],coordinates[17]));
+    distances.push(dbP_2d(coordinates[17],coordinates[21]));
+    distances.push(dbP_2d(coordinates[9],coordinates[21])); //index -> pinky
+    distances.push(dbP_2d(coordinates[6],coordinates[9])); //index check
+
+    for(let i = 0; i < distances.length; i++){
+      distances[i] = distances[i]*pixelScale;
+    }
+
+    return distances;
+  }
+
+  // Helper Func: Distance between two 3D points
+  export const dbP = (p1,p2) => {
+    return parseFloat(Math.sqrt(
+        Math.pow((p2[0]-p1[0]),2)+
+        Math.pow((p2[1]-p1[1]),2)+
+        Math.pow((p2[2]-p1[2]),2)
+      ));
+    // return Math.sqrt((p2[0]-p1[0])^2+(p2[2]-p1[2])^2+(p2[1]-p1[1])^2);
+  }
+  // Helper Func: Distance between two 3D points
+  export const dbP_2d = (p1,p2) => {
+    return parseFloat(Math.sqrt(
+        Math.pow((p2[0]-p1[0]),2)+
+        Math.pow((p2[1]-p1[1]),2)+
+        0
+      ));
+    // return Math.sqrt((p2[0]-p1[0])^2+(p2[2]-p1[2])^2+(p2[1]-p1[1])^2);
+  }
 
 export const objectToCSVRow = (dataObject) => {
   let dataArray = [];

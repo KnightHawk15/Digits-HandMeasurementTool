@@ -5,7 +5,7 @@ const Home = () =>{
 
     return(
         <div className="home-container">
-            <h1>Digits - Hand Measurement Tool</h1>
+            <h1 className="site-title">Digits - Hand Measurement Tool</h1>
             <p>Powered by Google Media Pipe</p>
             <div className="links-container">
                 
