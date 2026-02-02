@@ -43,7 +43,7 @@ export const dotProduct = (v1, v2) =>{
 export const calculateDistances = (coordinates, indexLength) => {
 
     const distances = []; 
-    const pixelScale = indexLength/dbP(coordinates[6],coordinates[9]); // Could be an issue when measuring the full finger as when it's bent the distance will shorten.
+    const pixelScale = indexLength/dbP(coordinates[9],coordinates[13]); // coordinates[6],coordinates[9]
 
     distances.push(dbP(coordinates[5],coordinates[9]));
     distances.push(dbP(coordinates[9],coordinates[13]));

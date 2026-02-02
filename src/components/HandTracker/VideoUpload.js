@@ -460,7 +460,7 @@ function VideoUpload() {
                 <img id="diagram_preload_tips_angles" src={diagram_wrist_tips_angles} alt="hand diagram" className="diagrams_src" />
               </div>
               <div className="grid-cell">
-                <h2>Index-Pinky Distance (cm)</h2>
+                <h2>Index-Middle TIP (cm)</h2>
                 <canvas ref={canvasRefIPDist} id="diagram_out" className="diagram" />
                 <img id="diagram_preload_IPDist" src={diagram_pinky_index_distance} alt="hand diagram" className="diagrams_src" />
               </div>

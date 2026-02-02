@@ -457,7 +457,7 @@ useEffect(() => {
                       <input name="sampleFps" className="input-box" type="number" step="1" placeholder={sampleFps.current}/>
                     </div>
                     <div className='formItem'>
-                      <label className="field-label">Index Finger MCT - TIP</label>
+                      <label className="field-label">Index-Middle TIP (cm)</label>
                       <input name="IndexLength" className="input-box" type="number" step="0.01" placeholder={indexLength.current} />
                     </div>
                     <div className='formItem'>
